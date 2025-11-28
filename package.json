@@ -1,5 +1,5 @@
 {
-  "name": "impostorClaudeCode",
+  "name": "impostor",
   "type": "module",
   "private": true,
   "scripts": {
@@ -7,10 +7,7 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare",
-    "deploy": "bun run build && wrangler pages deploy dist",
-    "cf:login": "wrangler login",
-    "cf:deploy": "wrangler pages deploy dist"
+    "postinstall": "nuxt prepare"
   },
   "dependencies": {
     "@nuxt/eslint": "1.11.0",
@@ -31,7 +28,6 @@
     "@iconify-json/heroicons": "^1.2.3",
     "@iconify-json/lucide": "^1.2.76",
     "@nuxt/image": "^2.0.0",
-    "@types/ws": "^8.18.1",
-    "wrangler": "^4.51.0"
+    "@types/ws": "^8.18.1"
   }
 }

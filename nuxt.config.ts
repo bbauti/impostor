@@ -34,51 +34,7 @@ export default defineNuxtConfig({
     compressPublicAssets: {
       gzip: true,
       brotli: true
-    },
-    // Prerender routes for better performance
-    prerender: {
-      crawlLinks: true,
-      routes: ['/'],
-      failOnError: false
-    },
-    // Route rules for caching and optimization
-    routeRules: {
-      // Homepage - prerender and cache
-      '/': {
-        prerender: true,
-        headers: {
-          'cache-control': 'public, max-age=3600, s-maxage=3600'
-        }
-      },
-      // API routes - no cache, enable CORS
-      '/api/**': {
-        cors: true,
-        headers: {
-          'cache-control': 'no-cache, no-store, must-revalidate',
-          'pragma': 'no-cache',
-          'expires': '0'
-        }
-      },
-      // Nuxt build assets - aggressive caching
-      '/_nuxt/**': {
-        headers: {
-          'cache-control': 'public, max-age=31536000, immutable'
-        }
-      },
-      // WebSocket route - no cache
-      '/_ws': {
-        headers: {
-          'cache-control': 'no-cache, no-store, must-revalidate'
-        }
-      },
-      // Room pages - SPA mode for dynamic routes
-      '/room/**': {
-        ssr: true,
-        headers: {
-          'cache-control': 'no-cache, no-store, must-revalidate'
-        }
-      }
-    },
+    }
   },
 
   // Vue and Vite optimizations
@@ -90,15 +46,6 @@ export default defineNuxtConfig({
       cssCodeSplit: true,
       // Target modern browsers for smaller bundles
       target: 'esnext',
-      // Optimize chunk size
-      rollupOptions: {
-        output: {
-          // Optimize chunk file names
-          chunkFileNames: '_nuxt/[name]-[hash].js',
-          entryFileNames: '_nuxt/[name]-[hash].js',
-          assetFileNames: '_nuxt/[name]-[hash][extname]'
-        }
-      },
       // Smaller chunk size warning limit
       chunkSizeWarningLimit: 1000,
       // Enable CSS minification
@@ -129,16 +76,10 @@ export default defineNuxtConfig({
   experimental: {
     // Enable payload extraction for faster navigation
     payloadExtraction: true,
-    // Enable component islands for partial hydration
-    componentIslands: true,
     // Enable render JSON payload as inline script
     inlineRouteRules: true,
     // Enable headNext for better head management
     headNext: true,
-    // Enable restore state after hydration
-    restoreState: true,
-    // Enable write early hints
-    writeEarlyHints: true
   },
 
   // Optimize font loading
