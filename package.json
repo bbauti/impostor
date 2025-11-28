@@ -7,7 +7,10 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "deploy": "bun run build && wrangler pages deploy dist",
+    "cf:login": "wrangler login",
+    "cf:deploy": "wrangler pages deploy dist"
   },
   "dependencies": {
     "@nuxt/eslint": "1.11.0",
@@ -25,6 +28,10 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1"
+    "@iconify-json/heroicons": "^1.2.3",
+    "@iconify-json/lucide": "^1.2.76",
+    "@nuxt/image": "^2.0.0",
+    "@types/ws": "^8.18.1",
+    "wrangler": "^4.51.0"
   }
 }
