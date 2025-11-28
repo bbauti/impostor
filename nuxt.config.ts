@@ -25,9 +25,7 @@ export default defineNuxtConfig({
     }
   },
 
-  // Cloudflare Pages optimizations
   nitro: {
-    preset: 'cloudflare-pages',
     experimental: {
       websocket: true
     },
@@ -81,11 +79,6 @@ export default defineNuxtConfig({
         }
       }
     },
-    // Cloudflare compatibility settings
-    cloudflarePagesConfig: {
-      compatibility_date: '2025-01-28',
-      compatibility_flags: ['nodejs_compat']
-    }
   },
 
   // Vue and Vite optimizations
@@ -100,18 +93,6 @@ export default defineNuxtConfig({
       // Optimize chunk size
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
-            // Split vendor chunks
-            if (id.includes('node_modules')) {
-              if (id.includes('vue') || id.includes('vue-router')) {
-                return 'vendor';
-              }
-              if (id.includes('@vueuse')) {
-                return 'vueuse';
-              }
-              return 'vendor-libs';
-            }
-          },
           // Optimize chunk file names
           chunkFileNames: '_nuxt/[name]-[hash].js',
           entryFileNames: '_nuxt/[name]-[hash].js',
@@ -126,10 +107,6 @@ export default defineNuxtConfig({
     // Enable CSS optimization
     css: {
       devSourcemap: false
-    },
-    // Optimize dependencies
-    optimizeDeps: {
-      include: ['vue', 'vue-router', '@vueuse/core']
     },
     // Enable esbuild optimizations
     esbuild: {
@@ -146,8 +123,6 @@ export default defineNuxtConfig({
         { name: 'format-detection', content: 'telephone=no' }
       ]
     },
-    // Enable page transitions for better UX
-    pageTransition: { name: 'page', mode: 'out-in' }
   },
 
   // Performance optimizations
@@ -156,8 +131,6 @@ export default defineNuxtConfig({
     payloadExtraction: true,
     // Enable component islands for partial hydration
     componentIslands: true,
-    // Enable view transitions API
-    viewTransition: true,
     // Enable render JSON payload as inline script
     inlineRouteRules: true,
     // Enable headNext for better head management
@@ -183,24 +156,6 @@ export default defineNuxtConfig({
   // Enable features for better performance
   features: {
     inlineStyles: true
-  },
-
-  // Image optimization
-  image: {
-    provider: 'cloudflare',
-    cloudflare: {
-      baseURL: process.env.NUXT_PUBLIC_SITE_URL || 'https://your-site.pages.dev'
-    },
-    formats: ['webp', 'avif'],
-    quality: 80,
-    screens: {
-      xs: 320,
-      sm: 640,
-      md: 768,
-      lg: 1024,
-      xl: 1280,
-      xxl: 1536
-    }
   },
 
   // Router optimizations
