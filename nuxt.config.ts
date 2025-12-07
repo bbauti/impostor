@@ -9,8 +9,13 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxt/image',
     '@nuxt/ui',
-    '@nuxtjs/mdc'
+    '@nuxtjs/mdc',
+    '@nuxtjs/supabase'
   ],
+
+  supabase: {
+    redirect: false
+  },
 
   css: ['~/assets/css/main.css'],
 
@@ -26,10 +31,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    experimental: {
-      websocket: true
-    },
-    // Enable minification and compression
     minify: true,
     compressPublicAssets: {
       gzip: true,

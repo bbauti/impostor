@@ -69,7 +69,11 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       body: settings
     })
 
-    if (response.success && response.roomId) navigateTo(`/room/${response.roomId}`)
+    if (response.success && response.roomId) {
+      // Save settings to sessionStorage for the room page to use
+      sessionStorage.setItem(`room_settings_${response.roomId}`, JSON.stringify(response.settings))
+      navigateTo(`/room/${response.roomId}`)
+    }
   } catch (e: any) {
     error.value = e.data?.message || 'Failed to create room'
   } finally {

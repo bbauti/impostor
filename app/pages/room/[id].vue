@@ -1,170 +1,203 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { MessageType, type RoomUpdatePayload, type RoleAssignedPayload } from '~/types/websocket'
-import type { GameOverData, PlayerStatus, VoteResult } from '~/types/game'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import type { RoomUpdatePayload, RoleAssignedPayload } from '~/types/websocket';
+import type { GameOverData, PlayerStatus, VoteResult, GameSettings } from '~/types/game';
+import { ROLE_REVEAL_DURATION } from '~/utils/constants';
 
-const route = useRoute()
-const roomId = route.params.id as string
+const route = useRoute();
+const roomId = route.params.id as string;
 
-const ws = useWebSocket()
-const gameState = useGameState()
-const session = useSession()
+const game = useSupabaseGame();
+const gameState = useGameState();
+const session = useSession();
 
-const playerName = ref('')
-const joined = ref(false)
-const showNamePrompt = ref(true)
-const error = ref('')
-const gameOverData = ref<GameOverData | null>(null)
+const playerName = ref('');
+const joined = ref(false);
+const showNamePrompt = ref(true);
+const error = ref('');
+const gameOverData = ref<GameOverData | null>(null);
+const roomSettings = ref<GameSettings | null>(null);
 
 // Cookie refresh interval
-let refreshInterval: NodeJS.Timeout | null = null
+let refreshInterval: NodeJS.Timeout | null = null;
+// Phase transition timeout
+let phaseTransitionTimeout: NodeJS.Timeout | null = null;
 
-onMounted(() => {
-  // Connect WebSocket immediately
-  ws.connect()
+onMounted(async () => {
+  // Try to load saved room settings from sessionStorage
+  const savedSettings = sessionStorage.getItem(`room_settings_${roomId}`);
+  if (savedSettings) {
+    try {
+      roomSettings.value = JSON.parse(savedSettings);
+    } catch {
+      // Ignore parse errors
+    }
+  }
 
   // Setup message handlers
-  ws.on(MessageType.CONNECT, (payload: any) => {
-    console.log('Connected with player ID:', payload.playerId)
-    gameState.setPlayerId(payload.playerId)
-    joined.value = true
+  game.on('CONNECT', (payload: any) => {
+    console.log('Connected with player ID:', payload.playerId);
+    gameState.setPlayerId(payload.playerId);
+    joined.value = true;
 
     // Create or update session cookie
-    session.createSession(payload.playerId, playerName.value, roomId)
+    session.createSession(payload.playerId, playerName.value, roomId);
 
     // Start cookie refresh interval (every 2 minutes)
-    startCookieRefresh()
-  })
+    startCookieRefresh();
+  });
 
-  ws.on(MessageType.RECONNECT, (payload: any) => {
-    console.log('Reconnected with player ID:', payload.playerId)
-    gameState.setPlayerId(payload.playerId)
-    joined.value = true
+  game.on('RECONNECT', (payload: any) => {
+    console.log('Reconnected with player ID:', payload.playerId);
+    gameState.setPlayerId(payload.playerId);
+    joined.value = true;
 
     // Update session
-    session.updateActivity()
-    session.updateRoomId(roomId)
+    session.updateActivity();
+    session.updateRoomId(roomId);
 
     // Start cookie refresh interval
-    startCookieRefresh()
-  })
+    startCookieRefresh();
+  });
 
-  ws.on(MessageType.ROOM_UPDATE, (payload: unknown) => {
-    const roomUpdate = payload as RoomUpdatePayload
-    gameState.updateRoom(roomUpdate.room)
+  game.on('ROOM_UPDATE', (payload: unknown) => {
+    const roomUpdate = payload as RoomUpdatePayload;
+    // Preserve current phase if we have one
+    if (gameState.phase.value !== 'waiting' && roomUpdate.room.phase === 'waiting') {
+      roomUpdate.room.phase = gameState.phase.value;
+    }
+    gameState.updateRoom(roomUpdate.room);
 
     // Update activity on room updates
-    session.updateActivity()
-  })
+    session.updateActivity();
+  });
 
-  ws.on(MessageType.ROLE_ASSIGNED, (payload: unknown) => {
-    const roleData = payload as RoleAssignedPayload
-    gameState.setRole(roleData.role === 'impostor', roleData.word)
-  })
+  game.on('ROLE_ASSIGNED', (payload: unknown) => {
+    const roleData = payload as RoleAssignedPayload;
+    gameState.setRole(roleData.role === 'impostor', roleData.word);
+  });
 
-  ws.on(MessageType.PHASE_CHANGE, (payload: any) => {
-    gameState.updatePhase(payload.phase)
+  game.on('PHASE_CHANGE', (payload: any) => {
+    gameState.updatePhase(payload.phase);
+
+    // Update player status to 'playing' when game starts
+    if (payload.phase === 'role_reveal') {
+      game.updatePresenceStatus('playing');
+    }
 
     // Clear votes when entering voting phase
     if (payload.phase === 'voting') {
-      gameState.clearVotes()
+      gameState.clearVotes();
     }
-  })
 
-  ws.on(MessageType.VOTE_UPDATE, (payload: any) => {
+    // Schedule transition from role_reveal to discussion (host only)
+    if (payload.phase === 'role_reveal' && gameState.isHost.value) {
+      if (phaseTransitionTimeout) {
+        clearTimeout(phaseTransitionTimeout);
+      }
+      phaseTransitionTimeout = setTimeout(() => {
+        game.transitionPhase('discussion');
+      }, ROLE_REVEAL_DURATION);
+    }
+  });
+
+  game.on('VOTE_UPDATE', (payload: any) => {
     // Update all votes in real-time (public voting)
     if (payload.votes) {
       Object.entries(payload.votes).forEach(([voterId, targetId]) => {
-        gameState.setVote(voterId, targetId as string)
-      })
+        gameState.setVote(voterId, targetId as string);
+      });
     }
-  })
+  });
 
-  ws.on(MessageType.VOTE_RESULTS, (payload: unknown) => {
-    const voteResult = payload as VoteResult
-    gameState.clearVotes()
-  })
+  game.on('VOTE_RESULTS', (_payload: unknown) => {
+    gameState.clearVotes();
+  });
 
-  ws.on(MessageType.GAME_OVER, (payload: unknown) => {
-    gameOverData.value = payload as GameOverData
-    gameState.updatePhase('ended')
-  })
+  game.on('GAME_OVER', (payload: unknown) => {
+    gameOverData.value = payload as GameOverData;
+    gameState.updatePhase('ended');
+  });
 
-  ws.on(MessageType.ERROR, (payload: any) => {
-    error.value = payload.message || 'Ocurrió un error'
+  game.on('ERROR', (payload: any) => {
+    error.value = payload.message || 'Ocurrió un error';
     // Show name prompt on error so user can see the error message
-    showNamePrompt.value = true
-    joined.value = false
-  })
-})
+    showNamePrompt.value = true;
+    joined.value = false;
+  });
+});
 
 onBeforeUnmount(() => {
   // Stop cookie refresh
-  stopCookieRefresh()
+  stopCookieRefresh();
 
-  ws.leaveRoom()
-  ws.disconnect()
-  gameState.reset()
+  // Clear phase transition timeout
+  if (phaseTransitionTimeout) {
+    clearTimeout(phaseTransitionTimeout);
+  }
+
+  game.leaveRoom();
+  gameState.reset();
 
   // Clear session when leaving room
-  session.updateRoomId(undefined)
-})
+  session.updateRoomId(undefined);
+});
 
 const startCookieRefresh = () => {
   // Refresh cookie every 2 minutes while in room
   refreshInterval = setInterval(() => {
     if (joined.value && session.isSessionValid()) {
-      session.refreshSession()
-      console.log('[Session] Cookie refreshed')
+      session.refreshSession();
+      console.log('[Session] Cookie refreshed');
     }
-  }, 2 * 60 * 1000) // 2 minutes
-}
+  }, 2 * 60 * 1000); // 2 minutes
+};
 
 const stopCookieRefresh = () => {
   if (refreshInterval) {
-    clearInterval(refreshInterval)
-    refreshInterval = null
+    clearInterval(refreshInterval);
+    refreshInterval = null;
   }
-}
+};
 
-const joinRoom = () => {
-  const name = playerName.value.trim()
+const joinRoom = async () => {
+  const name = playerName.value.trim();
 
   if (!name) {
-    error.value = 'Por favor ingresa tu nombre'
-    return
+    error.value = 'Por favor ingresa tu nombre';
+    return;
   }
 
   if (name.length > 20) {
-    error.value = 'El nombre debe tener máximo 20 caracteres'
-    return
+    error.value = 'El nombre debe tener máximo 20 caracteres';
+    return;
   }
 
-  error.value = ''
+  error.value = '';
 
   // Get existing session if available
-  const existingSession = session.getSession()
-  const playerId = existingSession?.playerId
+  const existingSession = session.getSession();
+  const playerId = existingSession?.playerId;
 
   // Join room - pass playerId if available for reconnection
-  ws.joinRoom(roomId, name, playerId)
-  showNamePrompt.value = false
-}
+  await game.joinRoom(roomId, name, playerId, roomSettings.value || undefined);
+  showNamePrompt.value = false;
+};
 
 const handleCallVote = () => {
-  ws.callVote()
-}
+  game.callVote();
+};
 
 const handleCastVote = (targetId: string | null) => {
   // Send vote to server
-  ws.castVote(targetId)
+  game.castVote(targetId);
 
   // Optimistic update - show your vote immediately
   // The server will broadcast to everyone (including you) for consistency
   if (gameState.currentPlayerId.value) {
-    gameState.setVote(gameState.currentPlayerId.value, targetId || '')
+    gameState.setVote(gameState.currentPlayerId.value, targetId || '');
   }
-}
+};
 
 const translateStatus = (status: PlayerStatus) => ({
   disconnected: 'Desconectado',
@@ -172,7 +205,7 @@ const translateStatus = (status: PlayerStatus) => ({
   ready: 'Listo',
   spectating: 'Espectador',
   waiting: 'Esperando'
-})[status]
+})[status];
 </script>
 
 <template>
@@ -258,7 +291,7 @@ const translateStatus = (status: PlayerStatus) => ({
               <div class="flex gap-2">
                 <UButton
                   v-if="!gameState.isReady.value && !gameState.isHost.value"
-                  @click="ws.markReady()"
+                  @click="game.markReady()"
                 >
                   Listo
                 </UButton>
@@ -267,7 +300,7 @@ const translateStatus = (status: PlayerStatus) => ({
                   v-if="gameState.isHost.value"
                   :disabled="!gameState.canStartGame.value"
                   color="neutral"
-                  @click="ws.startGame()"
+                  @click="game.startGame()"
                 >
                   Iniciar Juego
                 </UButton>
