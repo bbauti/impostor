@@ -4,9 +4,9 @@ import { getGameState, setGameState } from '../_shared/game-state-db.ts';
 type GamePhase = 'waiting' | 'role_reveal' | 'discussion' | 'voting' | 'ended';
 
 interface TransitionPhaseRequest {
-  roomId: string
-  playerId: string
-  newPhase: GamePhase
+  roomId: string;
+  playerId: string;
+  newPhase: GamePhase;
 }
 
 Deno.serve(async (req) => {
@@ -25,8 +25,6 @@ Deno.serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const previousPhase = room.phase;
 
     // Validate player is in room
     if (!room.players.includes(playerId)) {
@@ -72,14 +70,12 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log(`[transition-phase] Room ${roomId} transitioned from ${previousPhase} to ${newPhase}`);
-
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('[transition-phase] Error:', error);
+  }
+  catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

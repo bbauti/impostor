@@ -1,13 +1,13 @@
-import { useCookie } from '#app'
+import { useCookie } from '#app';
 
-const SESSION_COOKIE_NAME = 'impostor_session'
-const SESSION_MAX_AGE = 10 * 60 // 10 minutes in seconds
+const SESSION_COOKIE_NAME = 'impostor_session';
+const SESSION_MAX_AGE = 10 * 60; // 10 minutes in seconds
 
 export interface SessionData {
-  playerId: string
-  playerName: string
-  roomId?: string
-  lastActivity: number
+  playerId: string;
+  playerName: string;
+  roomId?: string;
+  lastActivity: number;
 }
 
 export const useSession = () => {
@@ -16,7 +16,7 @@ export const useSession = () => {
     sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
     default: () => null
-  })
+  });
 
   const createSession = (playerId: string, playerName: string, roomId?: string) => {
     sessionCookie.value = {
@@ -24,21 +24,21 @@ export const useSession = () => {
       playerName,
       roomId,
       lastActivity: Date.now()
-    }
-  }
+    };
+  };
 
   const getSession = (): SessionData | null => {
-    return sessionCookie.value
-  }
+    return sessionCookie.value;
+  };
 
   const updateActivity = () => {
     if (sessionCookie.value) {
       sessionCookie.value = {
         ...sessionCookie.value,
         lastActivity: Date.now()
-      }
+      };
     }
-  }
+  };
 
   const updateRoomId = (roomId: string | undefined) => {
     if (sessionCookie.value) {
@@ -46,23 +46,23 @@ export const useSession = () => {
         ...sessionCookie.value,
         roomId,
         lastActivity: Date.now()
-      }
+      };
     }
-  }
+  };
 
   const clearSession = () => {
-    sessionCookie.value = null
-  }
+    sessionCookie.value = null;
+  };
 
   const isSessionValid = (): boolean => {
-    if (!sessionCookie.value) return false
+    if (!sessionCookie.value) return false;
 
-    const now = Date.now()
-    const elapsed = now - sessionCookie.value.lastActivity
+    const now = Date.now();
+    const elapsed = now - sessionCookie.value.lastActivity;
 
     // Session valid if less than 10 minutes have passed
-    return elapsed < SESSION_MAX_AGE * 1000
-  }
+    return elapsed < SESSION_MAX_AGE * 1000;
+  };
 
   const refreshSession = () => {
     if (sessionCookie.value && isSessionValid()) {
@@ -70,9 +70,9 @@ export const useSession = () => {
       sessionCookie.value = {
         ...sessionCookie.value,
         lastActivity: Date.now()
-      }
+      };
     }
-  }
+  };
 
   return {
     createSession,
@@ -82,5 +82,5 @@ export const useSession = () => {
     clearSession,
     isSessionValid,
     refreshSession
-  }
-}
+  };
+};

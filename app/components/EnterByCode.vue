@@ -1,35 +1,37 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import * as z from 'zod';
+import type { FormSubmitEvent } from '@nuxt/ui';
 
 const schema = z.object({
   code: z.string({ error: 'El codigo es requerido' }).min(6, 'Tienen que ser 6 caracteres como minimo')
-})
+});
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema>;
 
 const state = reactive<Partial<Schema>>({
   code: undefined
-})
+});
 
-const loading = ref(false)
-const error = ref<string>('')
+const loading = ref(false);
+const error = ref<string>('');
 
 const onSubmit = async (event: FormSubmitEvent<Schema>) => {
-  const roomCode = event.data.code
+  const roomCode = event.data.code;
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = '';
 
   try {
-    const response = await $fetch(`/api/rooms/${roomCode}`) as { success: boolean }
-    if (response.success) navigateTo(`/room/${roomCode}`)
-  } catch (e: any) {
-    error.value = 'No se ha encontrado esa sala'
-  } finally {
-    loading.value = false
+    const response = await $fetch(`/api/rooms/${roomCode}`) as { success: boolean };
+    if (response.success) navigateTo(`/room/${roomCode}`);
   }
-}
+  catch {
+    error.value = 'No se ha encontrado esa sala';
+  }
+  finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <template>

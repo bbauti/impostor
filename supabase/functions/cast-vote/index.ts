@@ -3,9 +3,9 @@ import { tallyVotes, checkWinCondition } from '../_shared/game-logic.ts';
 import { getGameState, setGameState } from '../_shared/game-state-db.ts';
 
 interface CastVoteRequest {
-  roomId: string
-  playerId: string
-  targetId: string | null
+  roomId: string;
+  playerId: string;
+  targetId: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -62,10 +62,8 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log(`[cast-vote] Player ${playerId} voted for ${targetId || 'skip'}`);
-
     // Check if all votes cast
-    const allVoted = room.players.every((pid) => pid in room.votes);
+    const allVoted = room.players.every(pid => pid in room.votes);
 
     if (allVoted) {
       // Process votes
@@ -122,9 +120,8 @@ Deno.serve(async (req) => {
             }
           }
         });
-
-        console.log(`[cast-vote] Game ended. Winner: ${winner}`);
-      } else {
+      }
+      else {
         // Return to discussion
         room.phase = 'discussion';
         room.votes = {};
@@ -138,8 +135,6 @@ Deno.serve(async (req) => {
             payload: { phase: 'discussion' }
           }
         });
-
-        console.log(`[cast-vote] Returning to discussion`);
       }
     }
 
@@ -147,8 +142,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('[cast-vote] Error:', error);
+  }
+  catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

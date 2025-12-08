@@ -1,7 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
 
   modules: [
     '@nuxt/eslint',
@@ -13,23 +11,48 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase',
     'vue-sonner/nuxt'
   ],
+  devtools: { enabled: true },
 
-  supabase: {
-    redirect: false
+  // App optimizations
+  app: {
+    head: {
+      viewport: 'width=device-width, initial-scale=1',
+      charset: 'utf-8',
+      meta: [
+        { name: 'format-detection', content: 'telephone=no' }
+      ]
+    }
   },
 
   css: ['~/assets/css/main.css'],
 
-  eslint: {
-    config: {
-      stylistic: {
-        indent: 2,
-        semi: true,
-        quotes: 'single',
-        commaDangle: 'never'
-      }
+  // Router optimizations
+  router: {
+    options: {
+      strict: true
     }
   },
+
+  // Build optimizations
+  build: {
+    transpile: []
+  },
+
+  // Enable features for better performance
+  features: {
+    inlineStyles: true
+  },
+
+  // Performance optimizations
+  experimental: {
+    // Enable payload extraction for faster navigation
+    payloadExtraction: true,
+    // Enable render JSON payload as inline script
+    inlineRouteRules: true,
+    // Enable headNext for better head management
+    headNext: true
+  },
+  compatibilityDate: '2025-07-15',
 
   nitro: {
     minify: true,
@@ -66,25 +89,15 @@ export default defineNuxtConfig({
     }
   },
 
-  // App optimizations
-  app: {
-    head: {
-      viewport: 'width=device-width, initial-scale=1',
-      charset: 'utf-8',
-      meta: [
-        { name: 'format-detection', content: 'telephone=no' }
-      ]
-    },
-  },
-
-  // Performance optimizations
-  experimental: {
-    // Enable payload extraction for faster navigation
-    payloadExtraction: true,
-    // Enable render JSON payload as inline script
-    inlineRouteRules: true,
-    // Enable headNext for better head management
-    headNext: true,
+  eslint: {
+    config: {
+      stylistic: {
+        indent: 2,
+        semi: true,
+        quotes: 'single',
+        commaDangle: 'never'
+      }
+    }
   },
 
   // Optimize font loading
@@ -99,27 +112,14 @@ export default defineNuxtConfig({
     }
   },
 
-  // Enable features for better performance
-  features: {
-    inlineStyles: true
-  },
-
-  // Router optimizations
-  router: {
-    options: {
-      strict: true
-    }
-  },
-
-  // Build optimizations
-  build: {
-    transpile: []
-  },
-
   // Icon optimization
   icon: {
     serverBundle: {
       collections: ['heroicons', 'lucide']
     }
+  },
+
+  supabase: {
+    redirect: false
   }
-})
+});

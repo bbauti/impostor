@@ -1,48 +1,58 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 const emit = defineEmits<{
-  join: [roomId: string]
-}>()
+  join: [roomId: string];
+}>();
 
-const roomCode = ref('')
-const loading = ref(false)
-const error = ref('')
+const roomCode = ref('');
+const loading = ref(false);
+const error = ref('');
 
 const joinRoom = async () => {
-  const code = roomCode.value.trim().toUpperCase()
+  const code = roomCode.value.trim().toUpperCase();
 
   if (!code) {
-    error.value = 'Please enter a room code'
-    return
+    error.value = 'Please enter a room code';
+    return;
   }
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = '';
 
   try {
     // Verify room exists
-    const response = await $fetch(`/api/rooms/${code}`)
+    const response = await $fetch(`/api/rooms/${code}`);
 
     if (response.success) {
-      emit('join', code)
+      emit('join', code);
     }
-  } catch (e: any) {
-    error.value = e.data?.message || 'Room not found'
-  } finally {
-    loading.value = false
   }
-}
+  catch (e: any) {
+    error.value = e.data?.message || 'Room not found';
+  }
+  finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <template>
   <div class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold mb-6 text-gray-800">Join Room</h2>
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">
+      Join Room
+    </h2>
 
-    <form @submit.prevent="joinRoom" class="space-y-4">
+    <form
+      class="space-y-4"
+      @submit.prevent="joinRoom"
+    >
       <!-- Room Code Input -->
       <div>
-        <label for="roomCode" class="block text-sm font-medium text-gray-700 mb-2">
+        <label
+          for="roomCode"
+          class="block text-sm font-medium text-gray-700 mb-2"
+        >
           Room Code
         </label>
         <input
@@ -57,8 +67,13 @@ const joinRoom = async () => {
       </div>
 
       <!-- Error Message -->
-      <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded-md">
-        <p class="text-sm text-red-600">{{ error }}</p>
+      <div
+        v-if="error"
+        class="p-3 bg-red-50 border border-red-200 rounded-md"
+      >
+        <p class="text-sm text-red-600">
+          {{ error }}
+        </p>
       </div>
 
       <!-- Submit Button -->

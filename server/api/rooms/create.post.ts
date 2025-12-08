@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { serverSupabaseClient } from '#supabase/server';
 import type { GameSettings } from '../../../app/types/game';
 import { MIN_PLAYERS, MAX_PLAYERS, MIN_IMPOSTORS, MAX_IMPOSTORS, MIN_TIME_LIMIT, MAX_TIME_LIMIT } from '../../../app/utils/constants';
 
@@ -47,17 +48,38 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Generate room ID (6 characters, uppercase)
+  // Generate room ID (6 characters, uppercase) and creator ID
   const roomId = nanoid(6).toUpperCase();
+  const creatorId = `creator_${Date.now()}_${nanoid(9)}`;
+
+  const settings = {
+    maxPlayers,
+    impostorCount,
+    categories,
+    timeLimit
+  };
+
+  // Save room to database
+  const supabase = await serverSupabaseClient(event);
+  const { error } = await supabase
+    .from('rooms')
+    .insert({
+      room_id: roomId,
+      creator_id: creatorId,
+      settings
+    });
+
+  if (error) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to create room'
+    });
+  }
 
   return {
     success: true,
     roomId,
-    settings: {
-      maxPlayers,
-      impostorCount,
-      categories,
-      timeLimit
-    }
+    creatorId,
+    settings
   };
 });

@@ -27,7 +27,7 @@ Impostor es un juego de deducción social donde los jugadores deben identificar 
 * Si eres jugador normal: Da pistas específicas pero no tan obvias.
 * Si eres el impostor: Escucha atentamente y trata de imitar el comportamiento de los demás.
 * Observa las reacciones y respuestas de todos los jugadores.
-`
+`;
 </script>
 
 <template>

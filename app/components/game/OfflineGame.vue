@@ -1,38 +1,49 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
-import type { OfflineSettings } from '~/composables/useOfflineGame'
+import { onMounted, onUnmounted, watch, ref } from 'vue';
+import type { OfflineSettings } from '~/composables/useOfflineGame';
 
 const props = defineProps<{
-  settings: OfflineSettings
-}>()
+  settings: OfflineSettings;
+}>();
 
-const offlineGame = useOfflineGame()
+const offlineGame = useOfflineGame();
+const soundEffects = useSoundEffects();
+const lastTickedSecond = ref(-1);
 
 onMounted(() => {
-  offlineGame.initGame(props.settings)
-})
+  offlineGame.initGame(props.settings);
+});
 
 onUnmounted(() => {
-  offlineGame.cleanup()
-})
+  offlineGame.cleanup();
+});
 
 const handleTap = () => {
   if (offlineGame.phase.value === 'role_reveal') {
     if (!offlineGame.showingRole.value) {
-      offlineGame.revealRole()
-    } else {
-      offlineGame.nextPlayer()
+      offlineGame.revealRole();
+      soundEffects.play('roleReveal');
+    }
+    else {
+      offlineGame.nextPlayer();
     }
   }
-}
+};
+
+watch(() => offlineGame.timeRemaining.value, (newVal) => {
+  if (newVal <= 10 && newVal > 0 && newVal !== lastTickedSecond.value) {
+    soundEffects.play('countdownTick');
+    lastTickedSecond.value = newVal;
+  }
+});
 
 const handleFinish = () => {
-  offlineGame.endGame()
-}
+  offlineGame.endGame();
+};
 
 const goHome = () => {
-  navigateTo('/')
-}
+  navigateTo('/');
+};
 </script>
 
 <template>
@@ -67,15 +78,23 @@ const goHome = () => {
         </h1>
 
         <!-- Palabra secreta (solo para jugadores normales) -->
-        <div v-if="!offlineGame.currentPlayer.value?.isImpostor" class="mb-8">
-          <p class="text-xl text-highlighted mb-2">Tu palabra secreta es:</p>
+        <div
+          v-if="!offlineGame.currentPlayer.value?.isImpostor"
+          class="mb-8"
+        >
+          <p class="text-xl text-highlighted mb-2">
+            Tu palabra secreta es:
+          </p>
           <div class="text-4xl md:text-5xl font-bold text-highlighted bg-inverted/20 px-8 py-4 rounded-lg">
             {{ offlineGame.secretWord.value }}
           </div>
         </div>
 
         <!-- Instrucciones para impostor -->
-        <div v-else class="mb-8">
+        <div
+          v-else
+          class="mb-8"
+        >
           <p class="text-xl text-highlighted max-w-md mx-auto">
             No sabes la palabra secreta. Intenta descubrirla sin ser descubierto!
           </p>
@@ -138,7 +157,9 @@ const goHome = () => {
       </h1>
 
       <div class="border border-default rounded-lg p-6 mb-8 bg-default/50">
-        <p class="text-lg text-highlighted mb-2">La palabra secreta era:</p>
+        <p class="text-lg text-highlighted mb-2">
+          La palabra secreta era:
+        </p>
         <p class="text-4xl font-bold text-highlighted">
           {{ offlineGame.secretWord.value }}
         </p>

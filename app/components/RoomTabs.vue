@@ -10,7 +10,7 @@ const items = [
     icon: 'i-lucide-lock',
     slot: 'password'
   }
-]
+];
 </script>
 
 <template>

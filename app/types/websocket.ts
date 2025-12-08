@@ -1,4 +1,4 @@
-import type { Player, ClientRoomInfo, VoteResult, GameOverData, GamePhase } from './game'
+import type { ClientRoomInfo, GamePhase } from './game';
 
 export enum MessageType {
   // Connection
@@ -35,44 +35,44 @@ export enum MessageType {
 }
 
 export interface WebSocketMessage {
-  type: MessageType
-  payload: unknown
-  timestamp: number
-  roomId?: string
-  playerId?: string
+  type: MessageType;
+  payload: unknown;
+  timestamp: number;
+  roomId?: string;
+  playerId?: string;
 }
 
 // Specific message payloads
 export interface JoinRoomPayload {
-  roomId: string
-  playerName: string
-  playerId?: string // for reconnection
+  roomId: string;
+  playerName: string;
+  playerId?: string; // for reconnection
 }
 
 export interface RoomUpdatePayload {
-  room: ClientRoomInfo
+  room: ClientRoomInfo;
 }
 
 export interface RoleAssignedPayload {
-  role: 'impostor' | 'player'
-  word: string | null
+  role: 'impostor' | 'player';
+  word: string | null;
 }
 
 export interface PhaseChangePayload {
-  phase: GamePhase
-  timeRemaining?: number
+  phase: GamePhase;
+  timeRemaining?: number;
 }
 
 export interface CastVotePayload {
-  targetId: string | null // null for skip
+  targetId: string | null; // null for skip
 }
 
 export interface VoteUpdatePayload {
-  totalVotes: number
-  requiredVotes: number
+  totalVotes: number;
+  requiredVotes: number;
 }
 
 export interface ErrorPayload {
-  message: string
-  code?: string
+  message: string;
+  code?: string;
 }

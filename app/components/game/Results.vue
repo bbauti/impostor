@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import type { GameOverData } from '~/types/game'
+import type { GameOverData } from '~/types/game';
 
 const props = defineProps<{
-  gameOverData: GameOverData
-  currentPlayerId: string
-}>()
+  gameOverData: GameOverData;
+  currentPlayerId: string;
+}>();
 
 const isWinner = computed(() => {
-  const isImpostor = props.gameOverData.impostorIds.includes(props.currentPlayerId)
-  return (props.gameOverData.winner === 'impostors' && isImpostor) ||
-         (props.gameOverData.winner === 'players' && !isImpostor)
-})
+  const isImpostor = props.gameOverData.impostorIds.includes(props.currentPlayerId);
+  return (props.gameOverData.winner === 'impostors' && isImpostor)
+    || (props.gameOverData.winner === 'players' && !isImpostor);
+});
 
 const goHome = () => {
-  navigateTo('/')
-}
+  navigateTo('/');
+};
 </script>
 
 <template>
@@ -23,7 +23,7 @@ const goHome = () => {
       <div
         :class="[
           'text-center p-8 rounded-lg mb-6',
-          gameOverData.winner === 'players'
+          isWinner
             ? 'bg-success/70 border-2 border-success'
             : 'bg-error/70 border-2 border-error'
         ]"
@@ -53,7 +53,9 @@ const goHome = () => {
 
       <!-- Player Roles -->
       <div class="border border-default rounded-lg p-6 mb-6">
-        <ProseH4 class="font-semibold mb-4 text-highlight mt-0">Roles de los jugadores:</ProseH4>
+        <ProseH4 class="font-semibold mb-4 text-highlight mt-0">
+          Roles de los jugadores:
+        </ProseH4>
 
         <div class="space-y-2">
           <div
@@ -68,7 +70,11 @@ const goHome = () => {
           >
             <span class="font-medium text-highlighted">
               {{ player.name }}
-              <UBadge v-if="player.id === currentPlayerId" variant="soft" color="info">(Vos)</UBadge>
+              <UBadge
+                v-if="player.id === currentPlayerId"
+                variant="soft"
+                color="info"
+              >(Vos)</UBadge>
             </span>
 
             <span
@@ -88,9 +94,9 @@ const goHome = () => {
       <!-- Actions -->
       <div class="flex gap-4">
         <UButton
-          @click="goHome"
           class="flex mx-auto w-fit"
           size="xl"
+          @click="goHome"
         >
           🏠 Volver al inicio
         </UButton>

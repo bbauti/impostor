@@ -2,8 +2,8 @@ import { createAdminClient, corsHeaders } from '../_shared/supabase-client.ts';
 import { getGameState, setGameState } from '../_shared/game-state-db.ts';
 
 interface CallVoteRequest {
-  roomId: string
-  playerId: string
+  roomId: string;
+  playerId: string;
 }
 
 Deno.serve(async (req) => {
@@ -57,14 +57,12 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log(`[call-vote] Room ${roomId} started voting (round ${room.voteRound})`);
-
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('[call-vote] Error:', error);
+  }
+  catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

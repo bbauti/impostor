@@ -24,9 +24,6 @@ export default withNuxt(
       '@typescript-eslint/no-unused-expressions': 'warn',
 
       // Reglas de Vue
-      'vue/component-tags-order': ['error', {
-        order: ['script', 'template', 'style']
-      }],
       'vue/padding-line-between-blocks': 'error',
       'vue/no-console': isDev ? 'off' : 'error',
       'vue/multi-word-component-names': 'off',

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { es } from '@nuxt/ui/locale'
+import { es } from '@nuxt/ui/locale';
 </script>
 
 <template>

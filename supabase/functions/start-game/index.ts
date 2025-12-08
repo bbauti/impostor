@@ -3,17 +3,17 @@ import { selectImpostors, selectSecretWord, type RoomState, type GameSettings } 
 import { setGameState } from '../_shared/game-state-db.ts';
 
 interface PlayerInfo {
-  playerId: string
-  playerName: string
-  isReady: boolean
-  isHost: boolean
+  playerId: string;
+  playerName: string;
+  isReady: boolean;
+  isHost: boolean;
 }
 
 interface StartGameRequest {
-  roomId: string
-  playerId: string
-  players: PlayerInfo[]
-  settings: GameSettings
+  roomId: string;
+  playerId: string;
+  players: PlayerInfo[];
+  settings: GameSettings;
 }
 
 Deno.serve(async (req) => {
@@ -99,16 +99,12 @@ Deno.serve(async (req) => {
       }
     });
 
-    console.log(`[start-game] Started game in room ${roomId}`);
-    console.log(`[start-game] Secret word: ${secretWord}`);
-    console.log(`[start-game] Impostors: ${impostorIds.join(', ')}`);
-
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
-    console.error('[start-game] Error:', error);
+  }
+  catch (error) {
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

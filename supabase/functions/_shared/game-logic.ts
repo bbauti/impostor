@@ -1,28 +1,28 @@
 import { getRandomWord } from './words.ts';
 
 export interface Player {
-  id: string
-  name: string
-  status: 'waiting' | 'ready' | 'playing' | 'spectating' | 'disconnected'
-  isHost: boolean
+  id: string;
+  name: string;
+  status: 'waiting' | 'ready' | 'playing' | 'spectating' | 'disconnected';
+  isHost: boolean;
 }
 
 export interface GameSettings {
-  maxPlayers: number
-  impostorCount: number
-  categories: string[]
-  timeLimit: number
+  maxPlayers: number;
+  impostorCount: number;
+  categories: string[];
+  timeLimit: number;
 }
 
 export interface RoomState {
-  secretWord: string | null
-  impostorIds: string[]
-  phase: 'waiting' | 'role_reveal' | 'discussion' | 'voting' | 'ended'
-  votes: Record<string, string>
-  voteRound: number
-  timeStarted: number | null
-  players: string[]
-  settings: GameSettings
+  secretWord: string | null;
+  impostorIds: string[];
+  phase: 'waiting' | 'role_reveal' | 'discussion' | 'voting' | 'ended';
+  votes: Record<string, string>;
+  voteRound: number;
+  timeStarted: number | null;
+  players: string[];
+  settings: GameSettings;
 }
 
 export type GameResult = 'players' | 'impostors';
@@ -59,11 +59,11 @@ export function checkWinCondition(
 }
 
 export function tallyVotes(votes: Record<string, string>): {
-  eliminatedId: string | null
-  voteCounts: Record<string, number>
-  tie: boolean
-  skipVotes: number
-  majoritySkipped: boolean
+  eliminatedId: string | null;
+  voteCounts: Record<string, number>;
+  tie: boolean;
+  skipVotes: number;
+  majoritySkipped: boolean;
 } {
   const voteCounts: Record<string, number> = {};
   let skipVotes = 0;

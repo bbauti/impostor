@@ -160,7 +160,8 @@ export function getWordsForCategories(categoryIds: string[]): string[] {
   for (const categoryId of categoryIds) {
     if (categoryId in wordSets) {
       allWords.push(...wordSets[categoryId]);
-    } else if (categoryId in premiumWordSets) {
+    }
+    else if (categoryId in premiumWordSets) {
       allWords.push(...premiumWordSets[categoryId]);
     }
   }

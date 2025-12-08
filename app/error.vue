@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import type { NuxtError } from '#app'
+import type { NuxtError } from '#app';
 
 defineProps({
   error: {
     type: Object as PropType<NuxtError>,
     required: true
   }
-})
+});
 
 useHead({
   htmlAttrs: {
     lang: 'es'
   }
-})
+});
 
 useSeoMeta({
   title: 'No se ha encontrado esa pagina',
   description: 'Lo lamentamos! No hemos podido encontrar esa pagina.'
-})
+});
 </script>
 
 <template>

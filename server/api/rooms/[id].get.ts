@@ -1,4 +1,6 @@
-export default defineEventHandler((event) => {
+import { serverSupabaseClient } from '#supabase/server';
+
+export default defineEventHandler(async (event) => {
   const roomId = getRouterParam(event, 'id');
 
   if (!roomId) {
@@ -8,9 +10,6 @@ export default defineEventHandler((event) => {
     });
   }
 
-  // With Supabase Realtime, rooms exist when players are in them (via Presence)
-  // Just validate the format and return success
-  // The room page will handle if the room is empty
   if (roomId.length < 4 || roomId.length > 10) {
     throw createError({
       statusCode: 400,
@@ -18,8 +17,25 @@ export default defineEventHandler((event) => {
     });
   }
 
+  // Fetch room from database
+  const supabase = await serverSupabaseClient(event);
+  const { data: room, error } = await supabase
+    .from('rooms')
+    .select('room_id, creator_id, settings')
+    .eq('room_id', roomId)
+    .single();
+
+  if (error || !room) {
+    throw createError({
+      statusCode: 404,
+      message: 'Room not found'
+    });
+  }
+
   return {
     success: true,
-    roomId
+    roomId: room.room_id,
+    creatorId: room.creator_id,
+    settings: room.settings
   };
 });

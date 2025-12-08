@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import { categories } from '~/data/words'
-import { MIN_PLAYERS, MAX_PLAYERS, MIN_IMPOSTORS, MAX_IMPOSTORS, DEFAULT_TIME_LIMIT } from '~/utils/constants'
-import type { GameSettings } from '~/types/game'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import * as z from 'zod';
+import { categories } from '~/data/words';
+import { MIN_PLAYERS, MAX_PLAYERS, MIN_IMPOSTORS, MAX_IMPOSTORS, DEFAULT_TIME_LIMIT } from '~/utils/constants';
+import type { GameSettings } from '~/types/game';
 
 const schema = z.object({
   words: z.array(z.string(), { error: 'Debes seleccionar al menos un conjunto' }).min(1, 'Debes seleccionar al menos un conjunto'),
@@ -13,48 +12,46 @@ const schema = z.object({
 }).refine(data => data.spies < data.players, {
   message: 'Debe haber al menos un jugador sin ser espía',
   path: ['spies']
-})
+});
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema>;
 
 const state = ref<Partial<Schema>>({
   words: undefined,
   players: MIN_PLAYERS,
   spies: MIN_IMPOSTORS,
   timer: DEFAULT_TIME_LIMIT
-})
+});
 
-const loading = ref(false)
-const error = ref('')
+const loading = ref(false);
+const error = ref('');
 
-const isPremiumUser = true
-
-const items = ref(categories.map((category) => ({
+const items = ref(categories.map(category => ({
   label: category.name, value: category.id
-})))
+})));
 
 const canCreate = computed(() => {
   return (
-    state.value.players &&
-    state.value.players >= MIN_PLAYERS &&
-    state.value.players <= MAX_PLAYERS &&
-    state.value.spies &&
-    state.value.spies >= MIN_IMPOSTORS &&
-    state.value.spies <= MAX_IMPOSTORS &&
-    state.value.spies < state.value.players &&
-    state.value.words &&
-    state.value.words.length > 0 &&
-    state.value.timer &&
-    state.value.timer >= 5 &&
-    state.value.timer <= 30
-  )
-})
+    state.value.players
+    && state.value.players >= MIN_PLAYERS
+    && state.value.players <= MAX_PLAYERS
+    && state.value.spies
+    && state.value.spies >= MIN_IMPOSTORS
+    && state.value.spies <= MAX_IMPOSTORS
+    && state.value.spies < state.value.players
+    && state.value.words
+    && state.value.words.length > 0
+    && state.value.timer
+    && state.value.timer >= 5
+    && state.value.timer <= 30
+  );
+});
 
-const onSubmit = async (event: FormSubmitEvent<Schema>) => {
-  if (!canCreate.value || loading.value) return
+const onSubmit = async () => {
+  if (!canCreate.value || loading.value) return;
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = '';
 
   try {
     const settings: GameSettings = {
@@ -62,43 +59,46 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       impostorCount: state.value.spies!,
       categories: state.value.words!,
       timeLimit: state.value.timer! * 60 // Convert minutes to seconds
-    }
+    };
 
     const response = await $fetch('/api/rooms/create', {
       method: 'POST',
       body: settings
-    })
+    });
 
     if (response.success && response.roomId) {
-      // Save settings to sessionStorage for the room page to use
-      sessionStorage.setItem(`room_settings_${response.roomId}`, JSON.stringify(response.settings))
-      navigateTo(`/room/${response.roomId}`)
+      // Save settings and creatorId to sessionStorage for the room page to use
+      sessionStorage.setItem(`room_settings_${response.roomId}`, JSON.stringify(response.settings));
+      sessionStorage.setItem(`room_creator_${response.roomId}`, response.creatorId);
+      navigateTo(`/room/${response.roomId}`);
     }
-  } catch (e: any) {
-    error.value = e.data?.message || 'Failed to create room'
-  } finally {
-    loading.value = false
   }
-}
+  catch (e: any) {
+    error.value = e.data?.message || 'Failed to create room';
+  }
+  finally {
+    loading.value = false;
+  }
+};
 
 const handlePlayerCountChange = () => {
-  if (!state.value.players || state.value.players < 3) return
-  if (state.value.spies && state.value.spies >= state.value.players) state.value.spies = state.value.players - 1
-}
+  if (!state.value.players || state.value.players < 3) return;
+  if (state.value.spies && state.value.spies >= state.value.players) state.value.spies = state.value.players - 1;
+};
 
 const createOfflineGame = () => {
-  if (!canCreate.value) return
+  if (!canCreate.value) return;
 
   const offlineSettings = {
     playerCount: state.value.players!,
     impostorCount: state.value.spies!,
     categories: state.value.words!,
     timeLimit: state.value.timer! * 60
-  }
+  };
 
-  sessionStorage.setItem('offline_game_settings', JSON.stringify(offlineSettings))
-  navigateTo('/room/offline?mode=offline')
-}
+  sessionStorage.setItem('offline_game_settings', JSON.stringify(offlineSettings));
+  navigateTo('/room/offline?mode=offline');
+};
 </script>
 
 <template>
