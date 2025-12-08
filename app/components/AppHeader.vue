@@ -9,7 +9,6 @@ const { error } = defineProps<{ error?: boolean }>()
   >
     <ULink to="/" class="font-bold text-bg-accented ml-2 tracking-wide">Impostor</ULink>
     <div>
-      <GitHubButton />
       <ColorModeButton />
     </div>
   </header>

@@ -30,7 +30,7 @@ const error = ref('')
 const isPremiumUser = true
 
 const items = ref(categories.map((category) => ({
-  label: category.name, value: category.id, icon: category.premium && 'lucide:award', disabled: category.premium && !isPremiumUser
+  label: category.name, value: category.id
 })))
 
 const canCreate = computed(() => {
@@ -84,6 +84,20 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
 const handlePlayerCountChange = () => {
   if (!state.value.players || state.value.players < 3) return
   if (state.value.spies && state.value.spies >= state.value.players) state.value.spies = state.value.players - 1
+}
+
+const createOfflineGame = () => {
+  if (!canCreate.value) return
+
+  const offlineSettings = {
+    playerCount: state.value.players!,
+    impostorCount: state.value.spies!,
+    categories: state.value.words!,
+    timeLimit: state.value.timer! * 60
+  }
+
+  sessionStorage.setItem('offline_game_settings', JSON.stringify(offlineSettings))
+  navigateTo('/room/offline?mode=offline')
 }
 </script>
 
@@ -163,12 +177,22 @@ const handlePlayerCountChange = () => {
       </div>
     </UFormField>
 
-    <UButton
-      type="submit"
-      variant="outline"
-      class="w-fit"
-    >
-      Crear
-    </UButton>
+    <div class="flex gap-2">
+      <UButton
+        type="submit"
+        variant="outline"
+      >
+        Crear
+      </UButton>
+
+      <UButton
+        class="md:hidden"
+        variant="solid"
+        :disabled="!canCreate"
+        @click.prevent="createOfflineGame"
+      >
+        Crear sala Offline
+      </UButton>
+    </div>
   </UForm>
 </template>

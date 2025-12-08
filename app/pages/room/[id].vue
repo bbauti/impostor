@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import type { RoomUpdatePayload, RoleAssignedPayload } from '~/types/websocket';
 import type { GameOverData, PlayerStatus, VoteResult, GameSettings } from '~/types/game';
+import type { OfflineSettings } from '~/composables/useOfflineGame';
 import { ROLE_REVEAL_DURATION } from '~/utils/constants';
 
 const route = useRoute();
 const roomId = route.params.id as string;
+
+// Detectar modo offline
+const isOfflineMode = computed(() => route.query.mode === 'offline');
+const offlineSettings = ref<OfflineSettings | null>(null);
 
 const game = useSupabaseGame();
 const gameState = useGameState();
@@ -24,6 +29,24 @@ let refreshInterval: NodeJS.Timeout | null = null;
 let phaseTransitionTimeout: NodeJS.Timeout | null = null;
 
 onMounted(async () => {
+  // Modo Offline: cargar settings y no continuar con el flujo online
+  if (isOfflineMode.value) {
+    const savedOfflineSettings = sessionStorage.getItem('offline_game_settings');
+    if (savedOfflineSettings) {
+      try {
+        offlineSettings.value = JSON.parse(savedOfflineSettings);
+        sessionStorage.removeItem('offline_game_settings');
+      } catch {
+        // Error parsing, redirect home
+        navigateTo('/');
+      }
+    } else {
+      // No settings found, redirect home
+      navigateTo('/');
+    }
+    return; // No continuar con el flujo online
+  }
+
   // Try to load saved room settings from sessionStorage
   const savedSettings = sessionStorage.getItem(`room_settings_${roomId}`);
   if (savedSettings) {
@@ -210,6 +233,14 @@ const translateStatus = (status: PlayerStatus) => ({
 
 <template>
   <UPage>
+    <!-- Modo Offline -->
+    <GameOfflineGame
+      v-if="isOfflineMode && offlineSettings"
+      :settings="offlineSettings"
+    />
+
+    <!-- Modo Online -->
+    <template v-else>
     <!-- Name Prompt -->
     <div v-if="showNamePrompt" class="flex flex-col items-center justify-center mt-4 md:mt-6">
       <ProseH2 class="m-0!">Ingresa tu nombre</ProseH2>
@@ -354,5 +385,6 @@ const translateStatus = (status: PlayerStatus) => ({
       <Icon name="lucide:loader-circle" class="animate-spin text-6xl" />
       <ProseP class="text-dimmed mt-0!">Conectando...</ProseP>
     </div>
+    </template>
   </UPage>
 </template>

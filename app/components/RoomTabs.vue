@@ -6,7 +6,7 @@ const items = [
     slot: 'account'
   },
   {
-    label: 'Crear una sala',
+    label: 'Crear una partida',
     icon: 'i-lucide-lock',
     slot: 'password'
   }
