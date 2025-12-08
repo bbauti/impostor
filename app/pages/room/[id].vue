@@ -8,7 +8,6 @@ import { ROLE_REVEAL_DURATION } from '~/utils/constants';
 const route = useRoute();
 const roomId = route.params.id as string;
 
-// Detectar modo offline
 const isOfflineMode = computed(() => route.query.mode === 'offline');
 const offlineSettings = ref<OfflineSettings | null>(null);
 
@@ -23,13 +22,10 @@ const error = ref('');
 const gameOverData = ref<GameOverData | null>(null);
 const roomSettings = ref<GameSettings | null>(null);
 
-// Cookie refresh interval
 let refreshInterval: NodeJS.Timeout | null = null;
-// Phase transition timeout
 let phaseTransitionTimeout: NodeJS.Timeout | null = null;
 
 onMounted(async () => {
-  // Modo Offline: cargar settings y no continuar con el flujo online
   if (isOfflineMode.value) {
     const savedOfflineSettings = sessionStorage.getItem('offline_game_settings');
     if (savedOfflineSettings) {
@@ -37,36 +33,26 @@ onMounted(async () => {
         offlineSettings.value = JSON.parse(savedOfflineSettings);
         sessionStorage.removeItem('offline_game_settings');
       } catch {
-        // Error parsing, redirect home
         navigateTo('/');
       }
-    } else {
-      // No settings found, redirect home
-      navigateTo('/');
-    }
-    return; // No continuar con el flujo online
+    } else navigateTo('/');
+    return;
   }
 
-  // Try to load saved room settings from sessionStorage
   const savedSettings = sessionStorage.getItem(`room_settings_${roomId}`);
   if (savedSettings) {
     try {
       roomSettings.value = JSON.parse(savedSettings);
-    } catch {
-      // Ignore parse errors
-    }
+    } catch {}
   }
 
-  // Setup message handlers
   game.on('CONNECT', (payload: any) => {
     console.log('Connected with player ID:', payload.playerId);
     gameState.setPlayerId(payload.playerId);
     joined.value = true;
 
-    // Create or update session cookie
     session.createSession(payload.playerId, playerName.value, roomId);
 
-    // Start cookie refresh interval (every 2 minutes)
     startCookieRefresh();
   });
 
@@ -75,23 +61,19 @@ onMounted(async () => {
     gameState.setPlayerId(payload.playerId);
     joined.value = true;
 
-    // Update session
     session.updateActivity();
     session.updateRoomId(roomId);
 
-    // Start cookie refresh interval
     startCookieRefresh();
   });
 
   game.on('ROOM_UPDATE', (payload: unknown) => {
     const roomUpdate = payload as RoomUpdatePayload;
-    // Preserve current phase if we have one
     if (gameState.phase.value !== 'waiting' && roomUpdate.room.phase === 'waiting') {
       roomUpdate.room.phase = gameState.phase.value;
     }
     gameState.updateRoom(roomUpdate.room);
 
-    // Update activity on room updates
     session.updateActivity();
   });
 
@@ -103,21 +85,13 @@ onMounted(async () => {
   game.on('PHASE_CHANGE', (payload: any) => {
     gameState.updatePhase(payload.phase);
 
-    // Update player status to 'playing' when game starts
-    if (payload.phase === 'role_reveal') {
-      game.updatePresenceStatus('playing');
-    }
+    if (payload.phase === 'role_reveal') game.updatePresenceStatus('playing');
 
-    // Clear votes when entering voting phase
-    if (payload.phase === 'voting') {
-      gameState.clearVotes();
-    }
+    if (payload.phase === 'voting') gameState.clearVotes();
 
-    // Schedule transition from role_reveal to discussion (host only)
     if (payload.phase === 'role_reveal' && gameState.isHost.value) {
-      if (phaseTransitionTimeout) {
-        clearTimeout(phaseTransitionTimeout);
-      }
+      if (phaseTransitionTimeout) clearTimeout(phaseTransitionTimeout);
+
       phaseTransitionTimeout = setTimeout(() => {
         game.transitionPhase('discussion');
       }, ROLE_REVEAL_DURATION);
@@ -125,7 +99,6 @@ onMounted(async () => {
   });
 
   game.on('VOTE_UPDATE', (payload: any) => {
-    // Update all votes in real-time (public voting)
     if (payload.votes) {
       Object.entries(payload.votes).forEach(([voterId, targetId]) => {
         gameState.setVote(voterId, targetId as string);
@@ -144,36 +117,29 @@ onMounted(async () => {
 
   game.on('ERROR', (payload: any) => {
     error.value = payload.message || 'Ocurrió un error';
-    // Show name prompt on error so user can see the error message
     showNamePrompt.value = true;
     joined.value = false;
   });
 });
 
 onBeforeUnmount(() => {
-  // Stop cookie refresh
   stopCookieRefresh();
 
-  // Clear phase transition timeout
-  if (phaseTransitionTimeout) {
-    clearTimeout(phaseTransitionTimeout);
-  }
+  if (phaseTransitionTimeout) clearTimeout(phaseTransitionTimeout);
 
   game.leaveRoom();
   gameState.reset();
 
-  // Clear session when leaving room
   session.updateRoomId(undefined);
 });
 
 const startCookieRefresh = () => {
-  // Refresh cookie every 2 minutes while in room
   refreshInterval = setInterval(() => {
     if (joined.value && session.isSessionValid()) {
       session.refreshSession();
       console.log('[Session] Cookie refreshed');
     }
-  }, 2 * 60 * 1000); // 2 minutes
+  }, 2 * 60 * 1000);
 };
 
 const stopCookieRefresh = () => {
@@ -198,11 +164,9 @@ const joinRoom = async () => {
 
   error.value = '';
 
-  // Get existing session if available
   const existingSession = session.getSession();
   const playerId = existingSession?.playerId;
 
-  // Join room - pass playerId if available for reconnection
   await game.joinRoom(roomId, name, playerId, roomSettings.value || undefined);
   showNamePrompt.value = false;
 };
@@ -212,11 +176,8 @@ const handleCallVote = () => {
 };
 
 const handleCastVote = (targetId: string | null) => {
-  // Send vote to server
   game.castVote(targetId);
 
-  // Optimistic update - show your vote immediately
-  // The server will broadcast to everyone (including you) for consistency
   if (gameState.currentPlayerId.value) {
     gameState.setVote(gameState.currentPlayerId.value, targetId || '');
   }
@@ -233,13 +194,13 @@ const translateStatus = (status: PlayerStatus) => ({
 
 <template>
   <UPage>
-    <!-- Modo Offline -->
+    <!-- Offline Mode -->
     <GameOfflineGame
       v-if="isOfflineMode && offlineSettings"
       :settings="offlineSettings"
     />
 
-    <!-- Modo Online -->
+    <!-- Online Mode -->
     <template v-else>
     <!-- Name Prompt -->
     <div v-if="showNamePrompt" class="flex flex-col items-center justify-center mt-4 md:mt-6">

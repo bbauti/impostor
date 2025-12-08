@@ -10,7 +10,8 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxt/ui',
     '@nuxtjs/mdc',
-    '@nuxtjs/supabase'
+    '@nuxtjs/supabase',
+    'vue-sonner/nuxt'
   ],
 
   supabase: {
@@ -59,6 +60,9 @@ export default defineNuxtConfig({
     // Enable esbuild optimizations
     esbuild: {
       legalComments: 'none'
+    },
+    optimizeDeps: {
+      include: ['@vueuse/core']
     }
   },
 
