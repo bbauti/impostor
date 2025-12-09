@@ -47,9 +47,9 @@ Deno.serve(async (req) => {
     // Update database
     await setGameState(roomId, room);
 
-    // Broadcast vote update
+    // Broadcast vote update (fire-and-forget)
     const supabase = createAdminClient();
-    await supabase.channel(`room:${roomId}`).send({
+    supabase.channel(`room:${roomId}`).send({
       type: 'broadcast',
       event: 'game_event',
       payload: {
@@ -80,8 +80,8 @@ Deno.serve(async (req) => {
         room.players = room.players.filter(p => p !== eliminatedId);
       }
 
-      // Broadcast vote results
-      await supabase.channel(`room:${roomId}`).send({
+      // Broadcast vote results (fire-and-forget)
+      supabase.channel(`room:${roomId}`).send({
         type: 'broadcast',
         event: 'game_event',
         payload: {
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         room.phase = 'ended';
         await setGameState(roomId, room);
 
-        await supabase.channel(`room:${roomId}`).send({
+        supabase.channel(`room:${roomId}`).send({
           type: 'broadcast',
           event: 'game_event',
           payload: {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
         room.votes = {};
         await setGameState(roomId, room);
 
-        await supabase.channel(`room:${roomId}`).send({
+        supabase.channel(`room:${roomId}`).send({
           type: 'broadcast',
           event: 'game_event',
           payload: {

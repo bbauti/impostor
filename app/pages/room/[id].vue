@@ -173,6 +173,17 @@ onMounted(async () => {
     showNamePrompt.value = true;
     joined.value = false;
   });
+
+  game.on('ROOM_DELETED', (payload: any) => {
+    error.value = 'La sala ha sido cerrada porque todos los jugadores se fueron';
+    showNamePrompt.value = true;
+    joined.value = false;
+
+    // Redirigir después de 3 segundos
+    setTimeout(() => {
+      navigateTo('/');
+    }, 3000);
+  });
 });
 
 onBeforeUnmount(() => {

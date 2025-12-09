@@ -26,6 +26,8 @@ export const useSupabaseGame = () => {
   const currentPlayerId = ref<string | null>(null);
   const roomSettings = ref<GameSettings | null>(null);
   const roomCreatorId = ref<string | null>(null);
+  const activeUserCount = ref(0);
+  const cleanupTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null);
 
   const eventHandlers = new Map<string, ((payload: unknown) => void)[]>();
 
@@ -126,10 +128,58 @@ export const useSupabaseGame = () => {
     roomChannel.on('presence', { event: 'sync' }, () => {
       const presenceState = roomChannel.presenceState<PresencePayload>();
       const players = buildPlayersFromPresence(presenceState);
+
+      // Sincronizar contador de usuarios activos con estado real
+      activeUserCount.value = players.length;
+
       const roomInfo = buildClientRoomInfo(roomId, players);
 
       // Preserve current phase from local state if available
       emit('ROOM_UPDATE', { room: roomInfo });
+    });
+
+    // Handle player join
+    roomChannel.on('presence', { event: 'join' }, ({ key }) => {
+      console.log('Player joined:', key);
+      activeUserCount.value++;
+
+      // Cancelar limpieza pendiente si había alguna programada
+      if (cleanupTimeoutId.value) {
+        clearTimeout(cleanupTimeoutId.value);
+        cleanupTimeoutId.value = null;
+        console.log('Cleanup cancelled - player joined');
+      }
+    });
+
+    // Handle player leave
+    roomChannel.on('presence', { event: 'leave' }, ({ key }) => {
+      console.log('Player left:', key);
+      activeUserCount.value--;
+
+      // Solo programar limpieza si llegamos a 0 usuarios
+      if (activeUserCount.value === 0 && currentRoomId.value) {
+        console.log('Room appears empty, scheduling cleanup in 3 seconds...');
+
+        cleanupTimeoutId.value = setTimeout(async () => {
+          // Verificar de nuevo antes de eliminar (por si acaso)
+          const finalState = roomChannel.presenceState<PresencePayload>();
+          const finalPlayers = buildPlayersFromPresence(finalState);
+
+          if (finalPlayers.length === 0) {
+            console.log('Room confirmed empty, cleaning up...');
+            try {
+              await supabase.functions.invoke('cleanup-empty-room', {
+                body: { roomId: currentRoomId.value }
+              });
+              emit('ROOM_DELETED', { roomId: currentRoomId.value });
+            } catch (error) {
+              console.error('Failed to cleanup empty room:', error);
+            }
+          } else {
+            console.log('Room not empty after all, cleanup aborted');
+          }
+        }, 3000); // 3 segundos de debounce
+      }
     });
 
     // Handle broadcast events (game_event for all players)
@@ -178,6 +228,12 @@ export const useSupabaseGame = () => {
   };
 
   const leaveRoom = async () => {
+    // Limpiar timeout de limpieza pendiente
+    if (cleanupTimeoutId.value) {
+      clearTimeout(cleanupTimeoutId.value);
+      cleanupTimeoutId.value = null;
+    }
+
     if (channel.value) {
       await channel.value.untrack();
       await supabase.removeChannel(channel.value);
@@ -188,6 +244,7 @@ export const useSupabaseGame = () => {
     currentRoomId.value = null;
     roomSettings.value = null;
     roomCreatorId.value = null;
+    activeUserCount.value = 0;
   };
 
   const markReady = async () => {

@@ -108,8 +108,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Broadcast message via realtime channel
-    await supabase.channel(`room:${roomId}`).send({
+    // Broadcast message via realtime channel (fire-and-forget, no await)
+    // No esperamos el resultado para reducir latencia
+    supabase.channel(`room:${roomId}`).send({
       type: 'broadcast',
       event: 'game_event',
       payload: {

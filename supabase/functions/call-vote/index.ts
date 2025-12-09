@@ -46,9 +46,9 @@ Deno.serve(async (req) => {
 
     await setGameState(roomId, room);
 
-    // Broadcast phase change
+    // Broadcast phase change (fire-and-forget)
     const supabase = createAdminClient();
-    await supabase.channel(`room:${roomId}`).send({
+    supabase.channel(`room:${roomId}`).send({
       type: 'broadcast',
       event: 'game_event',
       payload: {

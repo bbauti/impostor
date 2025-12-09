@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
 
   // Validate settings
-  const { maxPlayers, impostorCount, categories, timeLimit } = body as GameSettings;
+  const { maxPlayers, impostorCount, categories, timeLimit, isPublic } = body as GameSettings & { isPublic?: boolean };
 
   if (!maxPlayers || maxPlayers < MIN_PLAYERS || maxPlayers > MAX_PLAYERS) {
     throw createError({
@@ -52,6 +52,9 @@ export default defineEventHandler(async (event) => {
   const roomId = nanoid(6).toUpperCase();
   const creatorId = `creator_${Date.now()}_${nanoid(9)}`;
 
+  // Ensure isPublic is a boolean (defaults to false)
+  const publicRoom = isPublic === true;
+
   const settings = {
     maxPlayers,
     impostorCount,
@@ -66,7 +69,8 @@ export default defineEventHandler(async (event) => {
     .insert({
       room_id: roomId,
       creator_id: creatorId,
-      settings
+      settings,
+      is_public: publicRoom
     });
 
   if (error) {
@@ -74,6 +78,26 @@ export default defineEventHandler(async (event) => {
       statusCode: 500,
       message: 'Failed to create room'
     });
+  }
+
+  // Create initial game state for the room
+  // This allows public rooms to be listed immediately
+  const { error: gameStateError } = await supabase
+    .from('game_states')
+    .insert({
+      room_id: roomId,
+      phase: 'waiting',
+      settings,
+      players: [],
+      impostor_ids: [],
+      votes: {},
+      vote_round: 0
+    });
+
+  if (gameStateError) {
+    // Log error but don't fail room creation
+    // Game state will be created when first player joins
+    console.error('Failed to create initial game state:', gameStateError);
   }
 
   return {

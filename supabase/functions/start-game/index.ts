@@ -72,11 +72,11 @@ Deno.serve(async (req) => {
     // Send role assignments and phase change via Supabase Realtime
     const supabase = createAdminClient();
 
-    // Send private role assignments to each player
+    // Send private role assignments to each player (fire-and-forget)
     for (const player of players) {
       const isImpostor = impostorIds.includes(player.playerId);
 
-      await supabase.channel(`room:${roomId}`).send({
+      supabase.channel(`room:${roomId}`).send({
         type: 'broadcast',
         event: `private:${player.playerId}`,
         payload: {
@@ -89,8 +89,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Broadcast phase change to all
-    await supabase.channel(`room:${roomId}`).send({
+    // Broadcast phase change to all (fire-and-forget)
+    supabase.channel(`room:${roomId}`).send({
       type: 'broadcast',
       event: 'game_event',
       payload: {

@@ -8,7 +8,8 @@ const schema = z.object({
   words: z.array(z.string(), { error: 'Debes seleccionar al menos un conjunto' }).min(1, 'Debes seleccionar al menos un conjunto'),
   players: z.number({ error: 'La cantidad de jugadores es requerida' }).min(3, 'Se necesitan al menos 3 jugadores'),
   spies: z.number({ error: 'La cantidad de espías es requerida' }).min(1, 'Se necesitan al menos 1 espía'),
-  timer: z.number({ error: 'El temporizador es requerido' }).min(5, 'El temporizador debe ser como mínimo 5 minutos')
+  timer: z.number({ error: 'El temporizador es requerido' }).min(5, 'El temporizador debe ser como mínimo 5 minutos'),
+  isPublic: z.boolean().optional()
 }).refine(data => data.spies < data.players, {
   message: 'Debe haber al menos un jugador sin ser espía',
   path: ['spies']
@@ -20,7 +21,8 @@ const state = ref<Partial<Schema>>({
   words: undefined,
   players: MIN_PLAYERS,
   spies: MIN_IMPOSTORS,
-  timer: DEFAULT_TIME_LIMIT
+  timer: DEFAULT_TIME_LIMIT,
+  isPublic: false
 });
 
 const loading = ref(false);
@@ -63,7 +65,10 @@ const onSubmit = async () => {
 
     const response = await $fetch('/api/rooms/create', {
       method: 'POST',
-      body: settings
+      body: {
+        ...settings,
+        isPublic: state.value.isPublic || false
+      }
     });
 
     if (response.success && response.roomId) {
@@ -175,6 +180,17 @@ const createOfflineGame = () => {
           class="w-full"
         />
       </div>
+    </UFormField>
+
+    <UFormField
+      name="isPublic"
+      label="Visibilidad de la sala"
+      help="Las salas publicas aparecen en el listado para que cualquiera pueda unirse"
+    >
+      <UCheckbox
+        v-model="state.isPublic"
+        label="Marcar como sala publica"
+      />
     </UFormField>
 
     <div class="flex gap-2">

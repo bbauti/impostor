@@ -67,4 +67,16 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
       </div>
     </UFormField>
   </UForm>
+
+  <!-- Divider -->
+  <div class="my-4 flex items-center gap-3">
+    <div class="flex-1 border-t border-default" />
+    <ProseP class="text-dimmed text-sm my-0">
+      o
+    </ProseP>
+    <div class="flex-1 border-t border-default" />
+  </div>
+
+  <!-- Public rooms list -->
+  <PublicRoomsList />
 </template>

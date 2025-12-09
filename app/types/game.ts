@@ -11,6 +11,27 @@ export interface GameSettings {
   timeLimit: number; // in seconds
 }
 
+export interface PublicRoomListItem {
+  roomId: string;
+  playerCount: number;
+  maxPlayers: number;
+  impostorCount: number;
+  categories: string[];
+  timeLimit: number; // in seconds
+  createdAt: string;
+}
+
+export interface PublicRoomsResponse {
+  success: boolean;
+  rooms: PublicRoomListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface Player {
   id: string;
   name: string;

@@ -42,6 +42,8 @@ export async function getGameState(roomId: string): Promise<RoomState | null> {
 export async function setGameState(roomId: string, state: RoomState): Promise<void> {
   const supabase = createAdminClient();
 
+  console.log('setGameState')
+
   const { error } = await supabase
     .from('game_states')
     .upsert({
@@ -74,4 +76,37 @@ export async function deleteGameState(roomId: string): Promise<void> {
   if (error) {
     throw new Error(`Failed to delete game state: ${error.message}`);
   }
+}
+
+export async function deleteRoom(roomId: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('rooms')
+    .delete()
+    .eq('room_id', roomId);
+
+  if (error) {
+    throw new Error(`Failed to delete room: ${error.message}`);
+  }
+}
+
+export async function deleteChatMessages(roomId: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from('chat_messages')
+    .delete()
+    .eq('room_id', roomId);
+
+  if (error) {
+    throw new Error(`Failed to delete chat messages: ${error.message}`);
+  }
+}
+
+export async function deleteRoomCompletely(roomId: string): Promise<void> {
+  // Delete in order: chat messages, game state, then room
+  await deleteChatMessages(roomId);
+  await deleteGameState(roomId);
+  await deleteRoom(roomId);
 }
