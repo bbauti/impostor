@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { RoomUpdatePayload, RoleAssignedPayload } from '~/types/websocket';
 import type { GameOverData, PlayerStatus, GameSettings } from '~/types/game';
+import type { ChatMessage } from '~/types/chat';
 import type { OfflineSettings } from '~/composables/useOfflineGame';
 import { ROLE_REVEAL_DURATION } from '~/utils/constants';
 
@@ -15,6 +16,7 @@ const game = useSupabaseGame();
 const gameState = useGameState();
 const session = useSession();
 const soundEffects = useSoundEffects();
+const roomChat = useRoomChat();
 
 const playerName = ref('');
 const joined = ref(false);
@@ -117,6 +119,11 @@ onMounted(async () => {
       soundEffects.play('callVote');
     }
 
+    // Load chat messages when entering discussion phase
+    if (payload.phase === 'discussion') {
+      roomChat.loadMessages(roomId);
+    }
+
     if (payload.phase === 'role_reveal' && gameState.isHost.value) {
       if (phaseTransitionTimeout) clearTimeout(phaseTransitionTimeout);
 
@@ -150,6 +157,15 @@ onMounted(async () => {
     const playerWon = (data.winner === 'players' && !isImpostor)
       || (data.winner === 'impostors' && isImpostor);
     soundEffects.play(playerWon ? 'victory' : 'defeat');
+
+    // Clear chat messages locally when game ends
+    roomChat.clearMessages();
+  });
+
+  // Listen for chat messages
+  game.on('CHAT_MESSAGE', (payload: unknown) => {
+    const message = payload as ChatMessage;
+    roomChat.addMessage(message);
   });
 
   game.on('ERROR', (payload: any) => {
@@ -166,6 +182,7 @@ onBeforeUnmount(() => {
 
   game.leaveRoom();
   gameState.reset();
+  roomChat.clearMessages();
 
   session.updateRoomId(undefined);
 });
@@ -238,10 +255,38 @@ const translateStatus = (status: PlayerStatus) => ({
   spectating: 'Espectador',
   waiting: 'Esperando'
 })[status];
+
+// Show chat only during game phases (discussion, voting, ended)
+const showChat = computed(() => {
+  const phase = gameState.phase.value;
+  return joined.value && !isOfflineMode.value && ['discussion', 'voting', 'ended', 'waiting'].includes(phase);
+});
+
+const handleSendMessage = async (content: string) => {
+  if (!gameState.currentPlayerId.value) return;
+
+  await roomChat.sendMessage(
+    roomId,
+    gameState.currentPlayerId.value,
+    playerName.value,
+    content
+  );
+};
 </script>
 
 <template>
   <UPage>
+    <!-- Chat Panel -->
+    <GameChatPanel
+      v-if="showChat"
+      :room-id="roomId"
+      :current-player-id="gameState.currentPlayerId.value || ''"
+      :current-player-name="playerName"
+      :messages="roomChat.messages.value"
+      :can-send="roomChat.canSend.value"
+      @send-message="handleSendMessage"
+    />
+
     <!-- Offline Mode -->
     <GameOfflineGame
       v-if="isOfflineMode && offlineSettings"

@@ -120,6 +120,12 @@ Deno.serve(async (req) => {
             }
           }
         });
+
+        // Delete chat messages for this room
+        await supabase
+          .from('chat_messages')
+          .delete()
+          .eq('room_id', roomId);
       }
       else {
         // Return to discussion
