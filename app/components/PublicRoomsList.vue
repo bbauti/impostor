@@ -142,9 +142,9 @@ watch(currentPage, () => {
 <template>
   <div class="mt-6">
     <div class="flex items-center justify-between mb-3">
-      <ProseH4 class="my-0">
+      <p class="text-xl font-semibold my-0">
         Salas Publicas
-      </ProseH4>
+      </p>
       <UBadge
         v-if="total > 0"
         variant="soft"
@@ -189,7 +189,7 @@ watch(currentPage, () => {
       v-else-if="rooms.length === 0"
       class="text-center py-8 border border-default rounded-lg"
     >
-      <ProseP class="text-dimmed text-sm mb-0">
+      <ProseP class="text-gray-600 dark:text-gray-400 text-sm mb-0">
         No hay salas publicas disponibles
       </ProseP>
     </div>
