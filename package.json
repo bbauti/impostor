@@ -17,7 +17,6 @@
     "@nuxt/ui": "^4.2.1",
     "@nuxtjs/mdc": "0.19.0",
     "@nuxtjs/supabase": "2.0.3",
-    "@vite-pwa/nuxt": "^1.1.0",
     "@vueuse/core": "12.8.2",
     "eslint": "^9.0.0",
     "nanoid": "^5.1.6",
@@ -32,7 +31,8 @@
     "@iconify-json/heroicons": "^1.2.3",
     "@iconify-json/lucide": "^1.2.76",
     "@nuxt/image": "^2.0.0",
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.1",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "overrides": {
     "@vueuse/core": "12.8.2"
