@@ -17,6 +17,7 @@
     "@nuxt/ui": "^4.2.1",
     "@nuxtjs/mdc": "0.19.0",
     "@nuxtjs/supabase": "2.0.3",
+    "@sentry/nuxt": "^10.30.0",
     "@vite-pwa/nuxt": "^1.1.0",
     "@vueuse/core": "12.8.2",
     "eslint": "^9.0.0",

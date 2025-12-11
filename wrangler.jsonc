@@ -1,0 +1,6 @@
+{
+  "compatibility_flags": ["nodejs_als"],
+  "version_metadata": {
+    "binding": "CF_VERSION_METADATA"
+  }
+}

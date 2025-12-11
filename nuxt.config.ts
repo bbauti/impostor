@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   modules: [
+    '@sentry/nuxt/module',
     '@nuxt/eslint',
     '@nuxt/hints',
     '@nuxt/icon',
@@ -57,10 +58,20 @@ export default defineNuxtConfig({
     }
   },
 
+  runtimeConfig: {
+    public: {
+      sentry: {
+        dsn: process.env.NUXT_PUBLIC_SENTRY_DSN
+      }
+    }
+  },
+
   // Build optimizations
   build: {
     transpile: []
   },
+
+  sourcemap: { client: 'hidden' },
 
   // Enable features for better performance
   features: {
@@ -149,6 +160,7 @@ export default defineNuxtConfig({
     },
     registerType: 'autoUpdate',
     workbox: {
+      navigateFallback: null,
       globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot,ico,ogg}'],
       runtimeCaching: [
         {
