@@ -43,6 +43,16 @@ export interface WebSocketMessage {
 }
 
 // Specific message payloads
+export interface ConnectPayload {
+  playerId: string;
+  roomId: string;
+}
+
+export interface ReconnectPayload {
+  playerId: string;
+  roomId: string;
+}
+
 export interface JoinRoomPayload {
   roomId: string;
   playerName: string;
@@ -68,8 +78,34 @@ export interface CastVotePayload {
 }
 
 export interface VoteUpdatePayload {
-  totalVotes: number;
-  requiredVotes: number;
+  votes: Record<string, string>;
+  voterId: string;
+  targetId: string | null;
+}
+
+export interface VoteResultsPayload {
+  eliminatedId: string | null;
+  wasImpostor: boolean;
+  voteCounts: Record<string, number>;
+  tie: boolean;
+  skipVotes: number;
+  revote: boolean;
+  voteRound: number;
+}
+
+export interface GameOverPayload {
+  winner: 'players' | 'impostors';
+  secretWord: string;
+  impostorIds: string[];
+}
+
+export interface ChatMessagePayload {
+  id: string;
+  roomId: string;
+  playerId: string;
+  playerName: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface ErrorPayload {

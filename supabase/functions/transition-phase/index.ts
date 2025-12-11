@@ -1,5 +1,6 @@
 import { createAdminClient, corsHeaders } from '../_shared/supabase-client.ts';
 import { getGameState, setGameState } from '../_shared/game-state-db.ts';
+import { broadcastGameEvent } from '../_shared/broadcast.ts';
 
 type GamePhase = 'waiting' | 'role_reveal' | 'discussion' | 'voting' | 'ended';
 
@@ -59,16 +60,9 @@ Deno.serve(async (req) => {
 
     await setGameState(roomId, room);
 
-    // Broadcast phase change (fire-and-forget)
+    // Broadcast phase change with retry logic
     const supabase = createAdminClient();
-    supabase.channel(`room:${roomId}`).send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'PHASE_CHANGE',
-        payload: { phase: newPhase }
-      }
-    });
+    await broadcastGameEvent(supabase, roomId, 'PHASE_CHANGE', { phase: newPhase });
 
     return new Response(
       JSON.stringify({ success: true }),

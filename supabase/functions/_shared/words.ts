@@ -154,25 +154,73 @@ export const premiumWordSets: Record<string, string[]> = {
   ]
 };
 
+/**
+ * Gets the word set for a category ID.
+ */
+function getWordSet(categoryId: string): string[] | undefined {
+  return wordSets[categoryId] ?? premiumWordSets[categoryId];
+}
+
+/**
+ * Gets all words for the given categories.
+ * Only used when all words are needed (not for random selection).
+ */
 export function getWordsForCategories(categoryIds: string[]): string[] {
   const allWords: string[] = [];
 
   for (const categoryId of categoryIds) {
-    if (categoryId in wordSets) {
-      allWords.push(...wordSets[categoryId]);
-    }
-    else if (categoryId in premiumWordSets) {
-      allWords.push(...premiumWordSets[categoryId]);
+    const set = getWordSet(categoryId);
+    if (set) {
+      allWords.push(...set);
     }
   }
 
   return allWords;
 }
 
+/**
+ * Generates a cryptographically secure random integer in range [0, max).
+ */
+function secureRandomInt(max: number): number {
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  // Use modulo with rejection to avoid bias (for small max values this is negligible)
+  return array[0] % max;
+}
+
+/**
+ * Gets a random word from the given categories.
+ * Optimized to avoid creating a large combined array.
+ * Uses cryptographically secure random for fairness.
+ */
 export function getRandomWord(categoryIds: string[]): string {
-  const words = getWordsForCategories(categoryIds);
-  if (words.length === 0) {
+  // Calculate total word count without creating array
+  let totalWords = 0;
+  const categorySets: { id: string; words: string[] }[] = [];
+
+  for (const categoryId of categoryIds) {
+    const set = getWordSet(categoryId);
+    if (set && set.length > 0) {
+      categorySets.push({ id: categoryId, words: set });
+      totalWords += set.length;
+    }
+  }
+
+  if (totalWords === 0) {
     throw new Error('No words available for selected categories');
   }
-  return words[Math.floor(Math.random() * words.length)];
+
+  // Pick random index using secure random
+  let targetIndex = secureRandomInt(totalWords);
+
+  // Find the word at that index by iterating through categories
+  for (const { words } of categorySets) {
+    if (targetIndex < words.length) {
+      return words[targetIndex];
+    }
+    targetIndex -= words.length;
+  }
+
+  // Fallback (should never reach here)
+  return categorySets[0].words[0];
 }

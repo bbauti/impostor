@@ -1,12 +1,18 @@
 import { serverSupabaseClient } from '#supabase/server';
 
+interface RoomSettings {
+  maxPlayers: number;
+  impostorCount: number;
+  categories: string[];
+  timeLimit: number;
+}
+
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const page = parseInt(query.page as string) || 1;
   const limit = 10;
   const offset = (page - 1) * limit;
 
-  // Validate page number
   if (page < 1 || page > 1000) {
     throw createError({
       statusCode: 400,
@@ -16,11 +22,40 @@ export default defineEventHandler(async (event) => {
 
   const supabase = await serverSupabaseClient(event);
 
-  // First, get all public rooms
-  const { data: rooms, error: roomsError, count } = await supabase
+  // Step 1: Get waiting game states with players (most selective filter first)
+  const { data: waitingGames, error: gamesError } = await supabase
+    .from('game_states')
+    .select('room_id, players')
+    .eq('phase', 'waiting');
+
+  if (gamesError) {
+    throw createError({
+      statusCode: 500,
+      message: 'Failed to fetch game states',
+      cause: gamesError
+    });
+  }
+
+  // Filter to only games with players
+  const gamesWithPlayers = (waitingGames || []).filter(
+    g => Array.isArray(g.players) && g.players.length > 0
+  );
+
+  if (gamesWithPlayers.length === 0) {
+    return {
+      success: true,
+      rooms: [],
+      pagination: { page, limit, total: 0, totalPages: 0 }
+    };
+  }
+
+  // Step 2: Get public rooms for those game states
+  const roomIds = gamesWithPlayers.map(g => g.room_id);
+  const { data: publicRooms, error: roomsError } = await supabase
     .from('rooms')
-    .select('room_id, settings, created_at', { count: 'exact' })
+    .select('room_id, settings, created_at')
     .eq('is_public', true)
+    .in('room_id', roomIds)
     .order('created_at', { ascending: false });
 
   if (roomsError) {
@@ -31,54 +66,18 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (!rooms || rooms.length === 0) {
-    return {
-      success: true,
-      rooms: [],
-      pagination: {
-        page,
-        limit,
-        total: 0,
-        totalPages: 0
-      }
-    };
-  }
-
-  // Get game states for all rooms to filter by phase
-  const roomIds = rooms.map(r => r.room_id);
-  const { data: gameStates, error: gameStatesError } = await supabase
-    .from('game_states')
-    .select('room_id, phase, players')
-    .in('room_id', roomIds)
-    .eq('phase', 'waiting');
-
-  if (gameStatesError) {
-    throw createError({
-      statusCode: 500,
-      message: 'Failed to fetch game states',
-      cause: gameStatesError
-    });
-  }
-
-  // Create a map of room_id to game state
-  const gameStateMap = new Map(
-    (gameStates || []).map(gs => [gs.room_id, gs])
+  // Step 3: Combine data - create lookup map for player counts
+  const playerCountMap = new Map(
+    gamesWithPlayers.map(g => [g.room_id, (g.players as string[]).length])
   );
 
-  // Filter rooms to only include those with waiting game states AND players
-  const waitingRooms = rooms
-    .filter(room => {
-      const gameState = gameStateMap.get(room.room_id);
-      // Solo incluir salas que tienen game state Y tienen jugadores activos
-      return gameState && (gameState.players || []).length > 0;
-    })
-    .map((room) => {
-      const settings = room.settings as any;
-      const gameState = gameStateMap.get(room.room_id);
-
+  const roomsWithPlayers = (publicRooms || [])
+    .filter(room => playerCountMap.has(room.room_id))
+    .map(room => {
+      const settings = room.settings as RoomSettings;
       return {
         roomId: room.room_id,
-        playerCount: (gameState?.players || []).length,
+        playerCount: playerCountMap.get(room.room_id) || 0,
         maxPlayers: settings.maxPlayers,
         impostorCount: settings.impostorCount,
         categories: settings.categories,
@@ -87,9 +86,8 @@ export default defineEventHandler(async (event) => {
       };
     });
 
-  // Apply pagination to the filtered results
-  const totalWaitingRooms = waitingRooms.length;
-  const paginatedRooms = waitingRooms.slice(offset, offset + limit);
+  const total = roomsWithPlayers.length;
+  const paginatedRooms = roomsWithPlayers.slice(offset, offset + limit);
 
   return {
     success: true,
@@ -97,8 +95,8 @@ export default defineEventHandler(async (event) => {
     pagination: {
       page,
       limit,
-      total: totalWaitingRooms,
-      totalPages: Math.ceil(totalWaitingRooms / limit)
+      total,
+      totalPages: Math.ceil(total / limit)
     }
   };
 });

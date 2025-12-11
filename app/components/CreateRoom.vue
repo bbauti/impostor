@@ -183,9 +183,10 @@ const createOfflineGame = () => {
     </UFormField>
 
     <UFormField
+      class="max-w-[90%] text-balance"
       name="isPublic"
       label="Visibilidad de la sala"
-      help="Las salas publicas aparecen en el listado para que cualquiera pueda unirse"
+      help="Cualquiera podrá unirse a las salas publicas"
     >
       <UCheckbox
         v-model="state.isPublic"

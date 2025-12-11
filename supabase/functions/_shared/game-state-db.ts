@@ -105,8 +105,18 @@ export async function deleteChatMessages(roomId: string): Promise<void> {
 }
 
 export async function deleteRoomCompletely(roomId: string): Promise<void> {
-  // Delete in order: chat messages, game state, then room
-  await deleteChatMessages(roomId);
-  await deleteGameState(roomId);
-  await deleteRoom(roomId);
+  const supabase = createAdminClient();
+
+  // Use atomic PostgreSQL function for transactional deletion
+  const { error } = await supabase.rpc('delete_room_completely', {
+    p_room_id: roomId
+  });
+
+  if (error) {
+    // Fallback to individual deletes if RPC fails (e.g., function not deployed yet)
+    console.warn('Atomic delete failed, falling back to sequential deletes:', error.message);
+    await deleteChatMessages(roomId);
+    await deleteGameState(roomId);
+    await deleteRoom(roomId);
+  }
 }

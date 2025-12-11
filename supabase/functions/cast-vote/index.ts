@@ -1,6 +1,7 @@
 import { createAdminClient, corsHeaders } from '../_shared/supabase-client.ts';
 import { tallyVotes, checkWinCondition } from '../_shared/game-logic.ts';
 import { getGameState, setGameState } from '../_shared/game-state-db.ts';
+import { broadcastGameEvent } from '../_shared/broadcast.ts';
 
 interface CastVoteRequest {
   roomId: string;
@@ -47,19 +48,12 @@ Deno.serve(async (req) => {
     // Update database
     await setGameState(roomId, room);
 
-    // Broadcast vote update (fire-and-forget)
+    // Broadcast vote update with retry logic
     const supabase = createAdminClient();
-    supabase.channel(`room:${roomId}`).send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'VOTE_UPDATE',
-        payload: {
-          votes: room.votes,
-          voterId: playerId,
-          targetId
-        }
-      }
+    await broadcastGameEvent(supabase, roomId, 'VOTE_UPDATE', {
+      votes: room.votes,
+      voterId: playerId,
+      targetId
     });
 
     // Check if all votes cast
@@ -80,22 +74,15 @@ Deno.serve(async (req) => {
         room.players = room.players.filter(p => p !== eliminatedId);
       }
 
-      // Broadcast vote results (fire-and-forget)
-      supabase.channel(`room:${roomId}`).send({
-        type: 'broadcast',
-        event: 'game_event',
-        payload: {
-          type: 'VOTE_RESULTS',
-          payload: {
-            eliminatedId: eliminatedId && !tie && !majoritySkipped ? eliminatedId : null,
-            wasImpostor,
-            voteCounts,
-            tie,
-            skipVotes,
-            revote: false,
-            voteRound: room.voteRound
-          }
-        }
+      // Broadcast vote results with retry logic
+      await broadcastGameEvent(supabase, roomId, 'VOTE_RESULTS', {
+        eliminatedId: eliminatedId && !tie && !majoritySkipped ? eliminatedId : null,
+        wasImpostor,
+        voteCounts,
+        tie,
+        skipVotes,
+        revote: false,
+        voteRound: room.voteRound
       });
 
       // Check win condition
@@ -108,17 +95,10 @@ Deno.serve(async (req) => {
         room.phase = 'ended';
         await setGameState(roomId, room);
 
-        supabase.channel(`room:${roomId}`).send({
-          type: 'broadcast',
-          event: 'game_event',
-          payload: {
-            type: 'GAME_OVER',
-            payload: {
-              winner,
-              secretWord: room.secretWord,
-              impostorIds: room.impostorIds
-            }
-          }
+        await broadcastGameEvent(supabase, roomId, 'GAME_OVER', {
+          winner,
+          secretWord: room.secretWord,
+          impostorIds: room.impostorIds
         });
 
         // Delete chat messages for this room
@@ -133,14 +113,7 @@ Deno.serve(async (req) => {
         room.votes = {};
         await setGameState(roomId, room);
 
-        supabase.channel(`room:${roomId}`).send({
-          type: 'broadcast',
-          event: 'game_event',
-          payload: {
-            type: 'PHASE_CHANGE',
-            payload: { phase: 'discussion' }
-          }
-        });
+        await broadcastGameEvent(supabase, roomId, 'PHASE_CHANGE', { phase: 'discussion' });
       }
     }
 

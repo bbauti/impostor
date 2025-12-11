@@ -2,6 +2,7 @@ import { useCookie } from '#app';
 
 const SESSION_COOKIE_NAME = 'impostor_session';
 const SESSION_MAX_AGE = 10 * 60; // 10 minutes in seconds
+const ACTIVITY_UPDATE_THROTTLE = 60 * 1000; // Only update cookie every 60 seconds
 
 export interface SessionData {
   playerId: string;
@@ -33,10 +34,17 @@ export const useSession = () => {
 
   const updateActivity = () => {
     if (sessionCookie.value) {
-      sessionCookie.value = {
-        ...sessionCookie.value,
-        lastActivity: Date.now()
-      };
+      const now = Date.now();
+      const timeSinceLastUpdate = now - sessionCookie.value.lastActivity;
+
+      // Only update cookie if enough time has passed (throttled)
+      // This prevents excessive cookie writes on frequent events
+      if (timeSinceLastUpdate >= ACTIVITY_UPDATE_THROTTLE) {
+        sessionCookie.value = {
+          ...sessionCookie.value,
+          lastActivity: now
+        };
+      }
     }
   };
 

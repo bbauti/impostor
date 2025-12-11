@@ -28,6 +28,8 @@ export const useSupabaseGame = () => {
   const roomCreatorId = ref<string | null>(null);
   const activeUserCount = ref(0);
   const cleanupTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null);
+  const syncPlayersDebounce = ref<NodeJS.Timeout | null>(null);
+  const cleanupAbortController = ref<AbortController | null>(null);
 
   const eventHandlers = new Map<string, ((payload: unknown) => void)[]>();
 
@@ -136,6 +138,28 @@ export const useSupabaseGame = () => {
 
       // Preserve current phase from local state if available
       emit('ROOM_UPDATE', { room: roomInfo });
+
+      // Sync players to database (debounced to avoid excessive calls)
+      if (syncPlayersDebounce.value) clearTimeout(syncPlayersDebounce.value);
+      syncPlayersDebounce.value = setTimeout(async () => {
+        if (currentRoomId.value) {
+          try {
+            await supabase.functions.invoke('sync-players', {
+              body: {
+                roomId: currentRoomId.value,
+                players: players.map(p => ({
+                  playerId: p.id,
+                  playerName: p.name
+                }))
+              }
+            });
+            console.log('[useSupabaseGame] Players synced:', players.length);
+          }
+          catch (error) {
+            console.error('[useSupabaseGame] Failed to sync players:', error);
+          }
+        }
+      }, 500);
     });
 
     // Handle player join
@@ -151,34 +175,87 @@ export const useSupabaseGame = () => {
       }
     });
 
-    // Handle player leave
-    roomChannel.on('presence', { event: 'leave' }, ({ key }) => {
-      console.log('Player left:', key);
+    // Handle player leave with proper async cleanup using AbortController
+    roomChannel.on('presence', { event: 'leave' }, async ({ key }) => {
+      console.log('[useSupabaseGame] Player left:', key);
       activeUserCount.value--;
 
-      // Solo programar limpieza si llegamos a 0 usuarios
+      // Only schedule cleanup if room appears empty
       if (activeUserCount.value === 0 && currentRoomId.value) {
-        console.log('Room appears empty, scheduling cleanup in 3 seconds...');
+        console.log('[useSupabaseGame] Room appears empty, checking phase for cleanup delay...');
 
-        cleanupTimeoutId.value = setTimeout(async () => {
-          // Verificar de nuevo antes de eliminar (por si acaso)
+        // Cancel any pending cleanup
+        if (cleanupAbortController.value) {
+          cleanupAbortController.value.abort();
+        }
+        cleanupAbortController.value = new AbortController();
+        const signal = cleanupAbortController.value.signal;
+        const roomIdToCleanup = currentRoomId.value;
+
+        try {
+          const { data, error } = await supabase
+            .from('game_states')
+            .select('phase')
+            .eq('room_id', roomIdToCleanup)
+            .single();
+
+          // Check if cleanup was aborted or query failed
+          if (signal.aborted || error || !data) {
+            if (!signal.aborted) {
+              console.log('[useSupabaseGame] Could not fetch game state for cleanup decision');
+            }
+            return;
+          }
+
+          const phase = data.phase;
+          let cleanupDelay: number;
+
+          if (phase === 'ended') {
+            cleanupDelay = 0;
+            console.log('[useSupabaseGame] Game ended, deleting room immediately');
+          }
+          else if (phase === 'waiting') {
+            cleanupDelay = 5 * 60 * 1000; // 5 minutes
+            console.log('[useSupabaseGame] Room in waiting phase, scheduling deletion in 5 minutes');
+          }
+          else {
+            cleanupDelay = 3000; // 3 seconds
+            console.log('[useSupabaseGame] Game in progress, scheduling deletion in 3 seconds');
+          }
+
+          // Wait for cleanup delay with abort support
+          await new Promise<void>((resolve, reject) => {
+            const timeoutId = setTimeout(resolve, cleanupDelay);
+            signal.addEventListener('abort', () => {
+              clearTimeout(timeoutId);
+              reject(new Error('Cleanup aborted'));
+            });
+          });
+
+          // Check again if aborted
+          if (signal.aborted) return;
+
+          // Verify room is still empty before cleanup
           const finalState = roomChannel.presenceState<PresencePayload>();
           const finalPlayers = buildPlayersFromPresence(finalState);
 
           if (finalPlayers.length === 0) {
-            console.log('Room confirmed empty, cleaning up...');
-            try {
-              await supabase.functions.invoke('cleanup-empty-room', {
-                body: { roomId: currentRoomId.value }
-              });
-              emit('ROOM_DELETED', { roomId: currentRoomId.value });
-            } catch (error) {
-              console.error('Failed to cleanup empty room:', error);
-            }
-          } else {
-            console.log('Room not empty after all, cleanup aborted');
+            console.log('[useSupabaseGame] Room confirmed empty, cleaning up...');
+            await supabase.functions.invoke('cleanup-empty-room', {
+              body: { roomId: roomIdToCleanup }
+            });
+            emit('ROOM_DELETED', { roomId: roomIdToCleanup });
           }
-        }, 3000); // 3 segundos de debounce
+          else {
+            console.log('[useSupabaseGame] Room not empty after all, cleanup aborted');
+          }
+        }
+        catch (e) {
+          // Cleanup was aborted or failed - that's expected
+          if (!(e instanceof Error && e.message === 'Cleanup aborted')) {
+            console.error('[useSupabaseGame] Failed to cleanup empty room:', e);
+          }
+        }
       }
     });
 
@@ -228,13 +305,50 @@ export const useSupabaseGame = () => {
   };
 
   const leaveRoom = async () => {
-    // Limpiar timeout de limpieza pendiente
+    // Clear sync players debounce
+    if (syncPlayersDebounce.value) {
+      clearTimeout(syncPlayersDebounce.value);
+      syncPlayersDebounce.value = null;
+    }
+
+    // Abort any pending cleanup operations
+    if (cleanupAbortController.value) {
+      cleanupAbortController.value.abort();
+      cleanupAbortController.value = null;
+    }
+
+    // Clear cleanup timeout
     if (cleanupTimeoutId.value) {
       clearTimeout(cleanupTimeoutId.value);
       cleanupTimeoutId.value = null;
     }
 
-    if (channel.value) {
+    // Clear event handlers to prevent memory leak
+    eventHandlers.clear();
+
+    if (channel.value && currentRoomId.value) {
+      // Check if we're the last player in the room
+      const presenceState = channel.value.presenceState<PresencePayload>();
+      const players = buildPlayersFromPresence(presenceState);
+      const roomIdBeforeLeave = currentRoomId.value;
+
+      // If we're the only player (or last player), sync empty players array immediately
+      // This ensures the room disappears from the public list
+      if (players.length <= 1) {
+        console.log('[useSupabaseGame] Last player leaving, syncing empty players array');
+        try {
+          await supabase.functions.invoke('sync-players', {
+            body: {
+              roomId: roomIdBeforeLeave,
+              players: []
+            }
+          });
+        }
+        catch (error) {
+          console.error('[useSupabaseGame] Failed to sync empty players:', error);
+        }
+      }
+
       await channel.value.untrack();
       await supabase.removeChannel(channel.value);
       channel.value = null;
@@ -379,6 +493,8 @@ export const useSupabaseGame = () => {
   };
 
   onUnmounted(() => {
+    // Clear event handlers explicitly to prevent memory leak
+    eventHandlers.clear();
     leaveRoom();
   });
 

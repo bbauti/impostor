@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import type { RoomUpdatePayload, RoleAssignedPayload } from '~/types/websocket';
-import type { GameOverData, PlayerStatus, GameSettings } from '~/types/game';
+import type {
+  ConnectPayload,
+  ReconnectPayload,
+  RoomUpdatePayload,
+  RoleAssignedPayload,
+  PhaseChangePayload,
+  VoteUpdatePayload,
+  ErrorPayload,
+  ChatMessagePayload
+} from '~/types/websocket';
+import type { GameOverData, PlayerStatus, GameSettings, GamePhase } from '~/types/game';
 import type { ChatMessage } from '~/types/chat';
 import type { OfflineSettings } from '~/composables/useOfflineGame';
 import { ROLE_REVEAL_DURATION } from '~/utils/constants';
@@ -72,17 +81,19 @@ onMounted(async () => {
     }
   }
 
-  game.on('CONNECT', (payload: any) => {
-    gameState.setPlayerId(payload.playerId);
+  game.on('CONNECT', (payload: unknown) => {
+    const data = payload as ConnectPayload;
+    gameState.setPlayerId(data.playerId);
     joined.value = true;
 
-    session.createSession(payload.playerId, playerName.value, roomId);
+    session.createSession(data.playerId, playerName.value, roomId);
 
     startCookieRefresh();
   });
 
-  game.on('RECONNECT', (payload: any) => {
-    gameState.setPlayerId(payload.playerId);
+  game.on('RECONNECT', (payload: unknown) => {
+    const data = payload as ReconnectPayload;
+    gameState.setPlayerId(data.playerId);
     joined.value = true;
 
     session.updateActivity();

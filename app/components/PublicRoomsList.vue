@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PublicRoomListItem, PublicRoomsResponse } from '~/types/game';
 import { categories } from '~/data/words';
+import { useDebounceFn } from '@vueuse/core';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const loading = ref(false);
 const error = ref<string>('');
@@ -11,8 +13,8 @@ const total = ref(0);
 const failedTries = ref(0);
 
 const supabase = useSupabaseClient();
-let roomsChannel: any = null;
-let gameStatesChannel: any = null;
+let roomsChannel: RealtimeChannel | null = null;
+let gameStatesChannel: RealtimeChannel | null = null;
 
 // Fetch public rooms
 const fetchRooms = async (showLoading = true) => {
@@ -20,9 +22,16 @@ const fetchRooms = async (showLoading = true) => {
   if (showLoading) loading.value = true;
   error.value = '';
 
+  console.log('[PublicRoomsList] Fetching rooms, page:', currentPage.value);
+
   try {
     const response = await $fetch<PublicRoomsResponse>(`/api/rooms/public?page=${currentPage.value}`);
     if (response.success) {
+      console.log('[PublicRoomsList] Fetch success:', {
+        roomCount: response.rooms.length,
+        total: response.pagination.total,
+        rooms: response.rooms.map(r => ({ id: r.roomId, players: r.playerCount }))
+      });
       rooms.value = response.rooms;
       totalPages.value = response.pagination.totalPages;
       total.value = response.pagination.total;
@@ -30,6 +39,7 @@ const fetchRooms = async (showLoading = true) => {
     }
   }
   catch (e: any) {
+    console.error('[PublicRoomsList] Fetch error:', e);
     failedTries.value++;
     error.value = e.data?.message || 'Error al cargar salas publicas';
   }
@@ -37,6 +47,11 @@ const fetchRooms = async (showLoading = true) => {
     loading.value = false;
   }
 };
+
+// Debounced fetch for real-time updates to prevent excessive API calls
+const debouncedFetchRooms = useDebounceFn(() => {
+  fetchRooms(false);
+}, 300);
 
 // Subscribe to real-time updates
 const subscribeToUpdates = () => {
@@ -53,7 +68,8 @@ const subscribeToUpdates = () => {
       },
       () => {
         // Refresh the list when a public room is created, updated, or deleted
-        fetchRooms(false);
+        console.log('[PublicRoomsList] Rooms table change detected, debounced refresh...');
+        debouncedFetchRooms();
       }
     )
     .subscribe();
@@ -68,10 +84,15 @@ const subscribeToUpdates = () => {
         schema: 'public',
         table: 'game_states'
       },
-      (payload: any) => {
+      (payload: { old?: { phase?: string }; new?: { phase?: string; room_id?: string } }) => {
+        console.log('[PublicRoomsList] Game states change:', {
+          oldPhase: payload.old?.phase,
+          newPhase: payload.new?.phase,
+          roomId: payload.new?.room_id
+        });
         // Only refresh if phase changed (room might have started/ended)
         if (payload.new?.phase !== payload.old?.phase) {
-          fetchRooms(false);
+          debouncedFetchRooms();
         }
       }
     )

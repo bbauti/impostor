@@ -1,12 +1,17 @@
-import { createAdminClient } from '../_shared/supabase-client.ts';
+import { createAdminClient, corsHeaders } from '../_shared/supabase-client.ts';
 import { deleteRoomCompletely } from '../_shared/game-state-db.ts';
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
@@ -16,32 +21,41 @@ Deno.serve(async (req) => {
     if (!roomId) {
       return new Response(JSON.stringify({ error: 'Room ID is required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('[cleanup-empty-room] Cleaning up room:', roomId);
 
     const supabase = createAdminClient();
 
-    // Check if room exists
-    const { data: roomData, error: roomError } = await supabase
-      .from('rooms')
-      .select('room_id')
+    // Check if room exists and get phase
+    const { data: gameState, error: gameStateError } = await supabase
+      .from('game_states')
+      .select('phase')
       .eq('room_id', roomId)
       .single();
 
-    if (roomError || !roomData) {
+    if (gameStateError || !gameState) {
+      console.log('[cleanup-empty-room] Room not found:', roomId);
       return new Response(JSON.stringify({ error: 'Room not found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
+    // First, clear the players array so the room disappears from public list immediately
+    await supabase
+      .from('game_states')
+      .update({ players: [] })
+      .eq('room_id', roomId);
+
+    console.log('[cleanup-empty-room] Cleared players array for room:', roomId);
+
     // Delete room and all associated data
-    // Note: We rely on the caller to ensure the room is empty
-    // as we can't directly check presence from edge functions
     await deleteRoomCompletely(roomId);
 
-    console.log(`Successfully cleaned up empty room: ${roomId}`);
+    console.log('[cleanup-empty-room] Successfully cleaned up room:', roomId);
 
     return new Response(
       JSON.stringify({
@@ -50,11 +64,11 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   } catch (error) {
-    console.error('Error cleaning up room:', error);
+    console.error('[cleanup-empty-room] Error:', error);
     return new Response(
       JSON.stringify({
         error: 'Failed to cleanup room',
@@ -62,7 +76,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

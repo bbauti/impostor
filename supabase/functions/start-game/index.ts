@@ -1,6 +1,7 @@
 import { createAdminClient, corsHeaders } from '../_shared/supabase-client.ts';
 import { selectImpostors, selectSecretWord, type RoomState, type GameSettings } from '../_shared/game-logic.ts';
 import { setGameState } from '../_shared/game-state-db.ts';
+import { broadcastGameEvent, broadcastPrivateMessage } from '../_shared/broadcast.ts';
 
 interface PlayerInfo {
   playerId: string;
@@ -72,32 +73,35 @@ Deno.serve(async (req) => {
     // Send role assignments and phase change via Supabase Realtime
     const supabase = createAdminClient();
 
-    // Send private role assignments to each player (fire-and-forget)
-    for (const player of players) {
+    // Send private role assignments to each player with retry logic
+    const roleAssignmentPromises = players.map(async (player) => {
       const isImpostor = impostorIds.includes(player.playerId);
-
-      supabase.channel(`room:${roomId}`).send({
-        type: 'broadcast',
-        event: `private:${player.playerId}`,
-        payload: {
-          type: 'ROLE_ASSIGNED',
-          payload: {
-            role: isImpostor ? 'impostor' : 'player',
-            word: isImpostor ? null : secretWord
-          }
+      const success = await broadcastPrivateMessage(
+        supabase,
+        roomId,
+        player.playerId,
+        'ROLE_ASSIGNED',
+        {
+          role: isImpostor ? 'impostor' : 'player',
+          word: isImpostor ? null : secretWord
         }
-      });
-    }
-
-    // Broadcast phase change to all (fire-and-forget)
-    supabase.channel(`room:${roomId}`).send({
-      type: 'broadcast',
-      event: 'game_event',
-      payload: {
-        type: 'PHASE_CHANGE',
-        payload: { phase: 'role_reveal' }
+      );
+      if (!success) {
+        console.warn(`[start-game] Failed to send role to player ${player.playerId}`);
       }
+      return success;
     });
+
+    // Broadcast phase change to all with retry logic
+    const phaseChangePromise = broadcastGameEvent(
+      supabase,
+      roomId,
+      'PHASE_CHANGE',
+      { phase: 'role_reveal' }
+    );
+
+    // Wait for all broadcasts to complete (best effort)
+    await Promise.all([...roleAssignmentPromises, phaseChangePromise]);
 
     return new Response(
       JSON.stringify({ success: true }),
