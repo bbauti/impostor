@@ -1,8 +1,5 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import { VitePWA } from 'vite-plugin-pwa'
-
 export default defineNuxtConfig({
-
   modules: [
     '@nuxt/eslint',
     '@nuxt/hints',
@@ -11,8 +8,10 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/mdc',
     '@nuxtjs/supabase',
-    'vue-sonner/nuxt'
+    'vue-sonner/nuxt',
+    '@vite-pwa/nuxt'
   ],
+
   devtools: { enabled: true },
 
   // App optimizations
@@ -27,24 +26,24 @@ export default defineNuxtConfig({
       meta: [
         { name: 'description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us. Crea salas, une a tus amigos y descubre quién es el impostor.' },
         { name: 'keywords', content: 'impostor, among us, juego, deducción social, online, multiplayer' },
-        { name: 'author', content: 'Impostor Game' },
+        { name: 'author', content: 'Bautista Igarzabal' },
         { name: 'robots', content: 'index, follow' },
         { name: 'format-detection', content: 'telephone=no' },
         // Open Graph
         { property: 'og:title', content: 'Impostor - Juego de Deducción Social' },
         { property: 'og:description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us.' },
         { property: 'og:type', content: 'website' },
-        { property: 'og:url', content: 'https://impostor-game.com' },
-        { property: 'og:image', content: 'https://impostor-game.com/og-image.png' },
+        { property: 'og:url', content: 'https://impostor.bbauti.ar' },
+        { property: 'og:image', content: 'https://impostor.bbauti.ar/og-image.png' },
         // Twitter
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: 'Impostor - Juego de Deducción Social' },
         { name: 'twitter:description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us.' },
-        { name: 'twitter:image', content: 'https://impostor-game.com/og-image.png' }
+        { name: 'twitter:image', content: 'https://impostor.bbauti.ar/og-image.png' }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'canonical', href: 'https://impostor-game.com' }
+        { rel: 'canonical', href: 'https://impostor.bbauti.ar' }
       ]
     }
   },
@@ -89,68 +88,6 @@ export default defineNuxtConfig({
 
   // Vue and Vite optimizations
   vite: {
-    plugins: [
-      VitePWA({
-        registerType: 'autoUpdate',
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot,ico,ogg}'],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/.*\.(png|jpg|jpeg|gif|svg|ico|ogg)$/,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'assets-cache',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
-                }
-              }
-            },
-            {
-              urlPattern: /\/api\/.*/,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'api-cache',
-                expiration: {
-                  maxEntries: 100,
-                  maxAgeSeconds: 60 * 60 * 24 // 1 day
-                }
-              }
-            },
-            {
-              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'supabase-cache',
-                expiration: {
-                  maxEntries: 50,
-                  maxAgeSeconds: 60 * 60 * 6 // 6 hours
-                }
-              }
-            }
-          ]
-        },
-        manifest: {
-          name: 'Impostor - Juego de Deducción Social',
-          short_name: 'Impostor',
-          description: 'Juega Impostor, un juego de deducción social inspirado en Among Us. Crea salas, une a tus amigos y descubre quién es el impostor.',
-          theme_color: '#000000',
-          background_color: '#ffffff',
-          display: 'standalone',
-          start_url: '/',
-          scope: '/',
-          icons: [
-            {
-              src: '/favicon.ico',
-              sizes: '48x48',
-              type: 'image/x-icon'
-            }
-          ],
-          categories: ['games', 'entertainment'],
-          lang: 'es'
-        }
-      })
-    ],
     build: {
       // Enable minification
       minify: 'esbuild',
@@ -206,7 +143,69 @@ export default defineNuxtConfig({
     }
   },
 
-
+  pwa: {
+    devOptions: {
+      enabled: false
+    },
+    registerType: 'autoUpdate',
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot,ico,ogg}'],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/.*\.(png|jpg|jpeg|gif|svg|ico|ogg)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'assets-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+            }
+          }
+        },
+        {
+          urlPattern: /\/api\/.*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 // 1 day
+            }
+          }
+        },
+        {
+          urlPattern: /^https:\/\/.*\.supabase\.co\/.*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'supabase-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 6 // 6 hours
+            }
+          }
+        }
+      ]
+    },
+    manifest: {
+      name: 'Impostor - Juego de Deducción Social',
+      short_name: 'Impostor',
+      description: 'Juega Impostor, un juego de deducción social inspirado en Among Us. Crea salas, une a tus amigos y descubre quién es el impostor.',
+      theme_color: '#000000',
+      background_color: '#ffffff',
+      display: 'standalone',
+      start_url: '/',
+      scope: '/',
+      icons: [
+        {
+          src: '/favicon.ico',
+          sizes: '48x48',
+          type: 'image/x-icon'
+        }
+      ],
+      categories: ['games', 'entertainment'],
+      lang: 'es'
+    }
+  },
 
   supabase: {
     redirect: false

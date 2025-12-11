@@ -4,6 +4,7 @@ import { es } from '@nuxt/ui/locale';
 
 <template>
   <UApp :locale="es">
+    <VitePwaManifest />
     <Toaster position="top-right" />
     <NuxtLayout>
       <UMain class="relative">
