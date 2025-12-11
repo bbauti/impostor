@@ -97,7 +97,6 @@ export default defineEventHandler(async (event) => {
   if (gameStateError) {
     // Log error but don't fail room creation
     // Game state will be created when first player joins
-    console.error('Failed to create initial game state:', gameStateError);
   }
 
   return {

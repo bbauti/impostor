@@ -25,8 +25,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log('[cleanup-empty-room] Cleaning up room:', roomId);
-
     const supabase = createAdminClient();
 
     // Check if room exists and get phase
@@ -37,7 +35,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (gameStateError || !gameState) {
-      console.log('[cleanup-empty-room] Room not found:', roomId);
       return new Response(JSON.stringify({ error: 'Room not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -50,12 +47,8 @@ Deno.serve(async (req) => {
       .update({ players: [] })
       .eq('room_id', roomId);
 
-    console.log('[cleanup-empty-room] Cleared players array for room:', roomId);
-
     // Delete room and all associated data
     await deleteRoomCompletely(roomId);
-
-    console.log('[cleanup-empty-room] Successfully cleaned up room:', roomId);
 
     return new Response(
       JSON.stringify({
@@ -67,8 +60,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
-  } catch (error) {
-    console.error('[cleanup-empty-room] Error:', error);
+  }
+  catch (error) {
     return new Response(
       JSON.stringify({
         error: 'Failed to cleanup room',

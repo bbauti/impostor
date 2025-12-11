@@ -42,8 +42,6 @@ export async function getGameState(roomId: string): Promise<RoomState | null> {
 export async function setGameState(roomId: string, state: RoomState): Promise<void> {
   const supabase = createAdminClient();
 
-  console.log('setGameState')
-
   const { error } = await supabase
     .from('game_states')
     .upsert({
@@ -114,7 +112,6 @@ export async function deleteRoomCompletely(roomId: string): Promise<void> {
 
   if (error) {
     // Fallback to individual deletes if RPC fails (e.g., function not deployed yet)
-    console.warn('Atomic delete failed, falling back to sequential deletes:', error.message);
     await deleteChatMessages(roomId);
     await deleteGameState(roomId);
     await deleteRoom(roomId);

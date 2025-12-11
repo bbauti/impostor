@@ -22,16 +22,9 @@ const fetchRooms = async (showLoading = true) => {
   if (showLoading) loading.value = true;
   error.value = '';
 
-  console.log('[PublicRoomsList] Fetching rooms, page:', currentPage.value);
-
   try {
     const response = await $fetch<PublicRoomsResponse>(`/api/rooms/public?page=${currentPage.value}`);
     if (response.success) {
-      console.log('[PublicRoomsList] Fetch success:', {
-        roomCount: response.rooms.length,
-        total: response.pagination.total,
-        rooms: response.rooms.map(r => ({ id: r.roomId, players: r.playerCount }))
-      });
       rooms.value = response.rooms;
       totalPages.value = response.pagination.totalPages;
       total.value = response.pagination.total;
@@ -39,7 +32,6 @@ const fetchRooms = async (showLoading = true) => {
     }
   }
   catch (e: any) {
-    console.error('[PublicRoomsList] Fetch error:', e);
     failedTries.value++;
     error.value = e.data?.message || 'Error al cargar salas publicas';
   }
@@ -68,7 +60,6 @@ const subscribeToUpdates = () => {
       },
       () => {
         // Refresh the list when a public room is created, updated, or deleted
-        console.log('[PublicRoomsList] Rooms table change detected, debounced refresh...');
         debouncedFetchRooms();
       }
     )
@@ -85,11 +76,6 @@ const subscribeToUpdates = () => {
         table: 'game_states'
       },
       (payload: { old?: { phase?: string }; new?: { phase?: string; room_id?: string } }) => {
-        console.log('[PublicRoomsList] Game states change:', {
-          oldPhase: payload.old?.phase,
-          newPhase: payload.new?.phase,
-          roomId: payload.new?.room_id
-        });
         // Only refresh if phase changed (room might have started/ended)
         if (payload.new?.phase !== payload.old?.phase) {
           debouncedFetchRooms();

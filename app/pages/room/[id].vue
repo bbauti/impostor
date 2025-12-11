@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue';
 import type {
   ConnectPayload,
   ReconnectPayload,
@@ -7,18 +7,26 @@ import type {
   RoleAssignedPayload,
   PhaseChangePayload,
   VoteUpdatePayload,
-  ErrorPayload,
-  ChatMessagePayload
+  ErrorPayload
 } from '~/types/websocket';
-import type { GameOverData, PlayerStatus, GameSettings, GamePhase } from '~/types/game';
+import type { GameOverData, PlayerStatus, GameSettings } from '~/types/game';
 import type { ChatMessage } from '~/types/chat';
 import type { OfflineSettings } from '~/composables/useOfflineGame';
 import { ROLE_REVEAL_DURATION } from '~/utils/constants';
+
+// Lazy load heavy game components
+const GameDiscussion = defineAsyncComponent(() => import('~/components/game/Discussion.vue'));
+const GameVoting = defineAsyncComponent(() => import('~/components/game/Voting.vue'));
+const GameResults = defineAsyncComponent(() => import('~/components/game/Results.vue'));
 
 const route = useRoute();
 const roomId = route.params.id as string;
 
 const isOfflineMode = computed(() => route.query.mode === 'offline');
+
+useHead({
+  title: computed(() => `Sala ${roomId} - Impostor`)
+});
 const offlineSettings = ref<OfflineSettings | null>(null);
 
 const game = useSupabaseGame();
@@ -26,6 +34,7 @@ const gameState = useGameState();
 const session = useSession();
 const soundEffects = useSoundEffects();
 const roomChat = useRoomChat();
+const timer = useTimer();
 
 const playerName = ref('');
 const joined = ref(false);
@@ -36,8 +45,7 @@ const roomSettings = ref<GameSettings | null>(null);
 const roomCreatorId = ref<string | null>(null);
 const roomNotFound = ref(false);
 
-let refreshInterval: NodeJS.Timeout | null = null;
-let phaseTransitionTimeout: NodeJS.Timeout | null = null;
+// Timers managed by useTimer composable
 
 onMounted(async () => {
   if (isOfflineMode.value) {
@@ -136,9 +144,7 @@ onMounted(async () => {
     }
 
     if (payload.phase === 'role_reveal' && gameState.isHost.value) {
-      if (phaseTransitionTimeout) clearTimeout(phaseTransitionTimeout);
-
-      phaseTransitionTimeout = setTimeout(() => {
+      timer.setTimeout(() => {
         game.transitionPhase('discussion');
       }, ROLE_REVEAL_DURATION);
     }
@@ -185,7 +191,7 @@ onMounted(async () => {
     joined.value = false;
   });
 
-  game.on('ROOM_DELETED', (payload: any) => {
+  game.on('ROOM_DELETED', (_payload: any) => {
     error.value = 'La sala ha sido cerrada porque todos los jugadores se fueron';
     showNamePrompt.value = true;
     joined.value = false;
@@ -198,10 +204,6 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  stopCookieRefresh();
-
-  if (phaseTransitionTimeout) clearTimeout(phaseTransitionTimeout);
-
   game.leaveRoom();
   gameState.reset();
   roomChat.clearMessages();
@@ -210,18 +212,11 @@ onBeforeUnmount(() => {
 });
 
 const startCookieRefresh = () => {
-  refreshInterval = setInterval(() => {
+  timer.setInterval(() => {
     if (joined.value && session.isSessionValid()) {
       session.refreshSession();
     }
   }, 2 * 60 * 1000);
-};
-
-const stopCookieRefresh = () => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval);
-    refreshInterval = null;
-  }
 };
 
 const joinRoom = async () => {

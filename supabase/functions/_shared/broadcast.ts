@@ -34,11 +34,8 @@ export async function broadcastWithRetry(
       if (result === 'ok') {
         return true;
       }
-
-      console.warn(`[broadcast] Attempt ${attempt + 1} failed for ${event} to room ${roomId}: ${result}`);
     }
     catch (error) {
-      console.error(`[broadcast] Attempt ${attempt + 1} error for ${event} to room ${roomId}:`, error);
     }
 
     // Wait before retrying (exponential backoff)
@@ -47,7 +44,6 @@ export async function broadcastWithRetry(
     }
   }
 
-  console.error(`[broadcast] All ${maxRetries + 1} attempts failed for ${event} to room ${roomId}`);
   return false;
 }
 

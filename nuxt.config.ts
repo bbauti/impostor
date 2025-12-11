@@ -16,10 +16,33 @@ export default defineNuxtConfig({
   // App optimizations
   app: {
     head: {
+      htmlAttrs: {
+        lang: 'es'
+      },
+      title: 'Impostor - Juego de Deducción Social',
       viewport: 'width=device-width, initial-scale=1',
       charset: 'utf-8',
       meta: [
-        { name: 'format-detection', content: 'telephone=no' }
+        { name: 'description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us. Crea salas, une a tus amigos y descubre quién es el impostor.' },
+        { name: 'keywords', content: 'impostor, among us, juego, deducción social, online, multiplayer' },
+        { name: 'author', content: 'Impostor Game' },
+        { name: 'robots', content: 'index, follow' },
+        { name: 'format-detection', content: 'telephone=no' },
+        // Open Graph
+        { property: 'og:title', content: 'Impostor - Juego de Deducción Social' },
+        { property: 'og:description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us.' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:url', content: 'https://impostor-game.com' },
+        { property: 'og:image', content: 'https://impostor-game.com/og-image.png' },
+        // Twitter
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Impostor - Juego de Deducción Social' },
+        { name: 'twitter:description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us.' },
+        { name: 'twitter:image', content: 'https://impostor-game.com/og-image.png' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'canonical', href: 'https://impostor-game.com' }
       ]
     }
   },
@@ -116,6 +139,52 @@ export default defineNuxtConfig({
   icon: {
     serverBundle: {
       collections: ['heroicons', 'lucide']
+    }
+  },
+
+  // PWA configuration
+  pwa: {
+    manifest: {
+      name: 'Impostor Game',
+      short_name: 'Impostor',
+      description: 'A social deduction game inspired by Among Us',
+      theme_color: '#000000',
+      background_color: '#ffffff',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/favicon.ico',
+          sizes: '48x48',
+          type: 'image/x-icon'
+        }
+      ]
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot,ico}'],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/.*\.(png|jpg|jpeg|gif|svg|ico)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'images-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+            }
+          }
+        },
+        {
+          urlPattern: /\/api\/.*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 // 1 day
+            }
+          }
+        }
+      ]
     }
   },
 

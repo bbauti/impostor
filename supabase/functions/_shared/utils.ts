@@ -8,7 +8,7 @@ const HTML_ENTITIES: Record<string, string> = {
   '<': '&lt;',
   '>': '&gt;',
   '"': '&quot;',
-  "'": '&#x27;',
+  '\'': '&#x27;',
   '/': '&#x2F;',
   '`': '&#x60;',
   '=': '&#x3D;'
@@ -88,7 +88,6 @@ export function createHandler(
       return await handler(req);
     }
     catch (error) {
-      console.error('[handler] Unhandled error:', error);
       return errorResponse(
         'Internal server error',
         500,

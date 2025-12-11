@@ -73,7 +73,7 @@ export default defineEventHandler(async (event) => {
 
   const roomsWithPlayers = (publicRooms || [])
     .filter(room => playerCountMap.has(room.room_id))
-    .map(room => {
+    .map((room) => {
       const settings = room.settings as RoomSettings;
       return {
         roomId: room.room_id,

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import * as z from 'zod';
+import { useOnline } from '@vueuse/core';
 import { categories } from '~/data/words';
 import { MIN_PLAYERS, MAX_PLAYERS, MIN_IMPOSTORS, MAX_IMPOSTORS, DEFAULT_TIME_LIMIT } from '~/utils/constants';
 import type { GameSettings } from '~/types/game';
+
+const isOnline = useOnline();
 
 const schema = z.object({
   words: z.array(z.string(), { error: 'Debes seleccionar al menos un conjunto' }).min(1, 'Debes seleccionar al menos un conjunto'),
@@ -50,7 +53,7 @@ const canCreate = computed(() => {
 });
 
 const onSubmit = async () => {
-  if (!canCreate.value || loading.value) return;
+  if (!canCreate.value || loading.value || !isOnline.value) return;
 
   loading.value = true;
   error.value = '';
@@ -191,6 +194,7 @@ const createOfflineGame = () => {
       <UCheckbox
         v-model="state.isPublic"
         label="Marcar como sala publica"
+        :disabled="!isOnline"
       />
     </UFormField>
 
@@ -198,6 +202,7 @@ const createOfflineGame = () => {
       <UButton
         type="submit"
         variant="outline"
+        :disabled="!isOnline"
       >
         Crear
       </UButton>

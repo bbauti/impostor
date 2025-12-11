@@ -153,10 +153,9 @@ export const useSupabaseGame = () => {
                 }))
               }
             });
-            console.log('[useSupabaseGame] Players synced:', players.length);
           }
-          catch (error) {
-            console.error('[useSupabaseGame] Failed to sync players:', error);
+          catch {
+            void 0;
           }
         }
       }, 500);
@@ -164,26 +163,21 @@ export const useSupabaseGame = () => {
 
     // Handle player join
     roomChannel.on('presence', { event: 'join' }, ({ key }) => {
-      console.log('Player joined:', key);
       activeUserCount.value++;
 
       // Cancelar limpieza pendiente si había alguna programada
       if (cleanupTimeoutId.value) {
         clearTimeout(cleanupTimeoutId.value);
         cleanupTimeoutId.value = null;
-        console.log('Cleanup cancelled - player joined');
       }
     });
 
     // Handle player leave with proper async cleanup using AbortController
     roomChannel.on('presence', { event: 'leave' }, async ({ key }) => {
-      console.log('[useSupabaseGame] Player left:', key);
       activeUserCount.value--;
 
       // Only schedule cleanup if room appears empty
       if (activeUserCount.value === 0 && currentRoomId.value) {
-        console.log('[useSupabaseGame] Room appears empty, checking phase for cleanup delay...');
-
         // Cancel any pending cleanup
         if (cleanupAbortController.value) {
           cleanupAbortController.value.abort();
@@ -202,7 +196,6 @@ export const useSupabaseGame = () => {
           // Check if cleanup was aborted or query failed
           if (signal.aborted || error || !data) {
             if (!signal.aborted) {
-              console.log('[useSupabaseGame] Could not fetch game state for cleanup decision');
             }
             return;
           }
@@ -212,15 +205,12 @@ export const useSupabaseGame = () => {
 
           if (phase === 'ended') {
             cleanupDelay = 0;
-            console.log('[useSupabaseGame] Game ended, deleting room immediately');
           }
           else if (phase === 'waiting') {
             cleanupDelay = 5 * 60 * 1000; // 5 minutes
-            console.log('[useSupabaseGame] Room in waiting phase, scheduling deletion in 5 minutes');
           }
           else {
             cleanupDelay = 3000; // 3 seconds
-            console.log('[useSupabaseGame] Game in progress, scheduling deletion in 3 seconds');
           }
 
           // Wait for cleanup delay with abort support
@@ -240,20 +230,17 @@ export const useSupabaseGame = () => {
           const finalPlayers = buildPlayersFromPresence(finalState);
 
           if (finalPlayers.length === 0) {
-            console.log('[useSupabaseGame] Room confirmed empty, cleaning up...');
             await supabase.functions.invoke('cleanup-empty-room', {
               body: { roomId: roomIdToCleanup }
             });
             emit('ROOM_DELETED', { roomId: roomIdToCleanup });
           }
           else {
-            console.log('[useSupabaseGame] Room not empty after all, cleanup aborted');
           }
         }
         catch (e) {
           // Cleanup was aborted or failed - that's expected
           if (!(e instanceof Error && e.message === 'Cleanup aborted')) {
-            console.error('[useSupabaseGame] Failed to cleanup empty room:', e);
           }
         }
       }
@@ -335,7 +322,6 @@ export const useSupabaseGame = () => {
       // If we're the only player (or last player), sync empty players array immediately
       // This ensures the room disappears from the public list
       if (players.length <= 1) {
-        console.log('[useSupabaseGame] Last player leaving, syncing empty players array');
         try {
           await supabase.functions.invoke('sync-players', {
             body: {
@@ -345,7 +331,6 @@ export const useSupabaseGame = () => {
           });
         }
         catch (error) {
-          console.error('[useSupabaseGame] Failed to sync empty players:', error);
         }
       }
 

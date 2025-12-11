@@ -87,7 +87,6 @@ Deno.serve(async (req) => {
         }
       );
       if (!success) {
-        console.warn(`[start-game] Failed to send role to player ${player.playerId}`);
       }
       return success;
     });
