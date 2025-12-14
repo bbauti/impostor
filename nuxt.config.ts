@@ -10,7 +10,8 @@ export default defineNuxtConfig({
     '@nuxtjs/mdc',
     '@nuxtjs/supabase',
     'vue-sonner/nuxt',
-    '@vite-pwa/nuxt'
+    '@vite-pwa/nuxt',
+    '@nuxtjs/seo'
   ],
 
   devtools: { enabled: true },
@@ -25,26 +26,41 @@ export default defineNuxtConfig({
       viewport: 'width=device-width, initial-scale=1',
       charset: 'utf-8',
       meta: [
-        { name: 'description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us. Crea salas, une a tus amigos y descubre quién es el impostor.' },
-        { name: 'keywords', content: 'impostor, among us, juego, deducción social, online, multiplayer' },
+        // Primary SEO
+        { name: 'description', content: 'Juega Impostor Online GRATIS - El mejor juego de deducción social en español. Crea salas privadas, invita amigos y descubre quién es el impostor. Sin descargas, juega desde el navegador.' },
+        { name: 'keywords', content: 'impostor, impostor online, juego impostor, jugar impostor, impostor juego, deducción social, juego deducción social online, among us alternativa, juego tipo among us, impostor gratis, jugar impostor online gratis, juego de roles online, encontrar al impostor, juego multijugador online, juego impostor gratis, juego deducir impostor' },
         { name: 'author', content: 'Bautista Igarzabal' },
-        { name: 'robots', content: 'index, follow' },
+        { name: 'robots', content: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' },
         { name: 'format-detection', content: 'telephone=no' },
+        { name: 'theme-color', content: '#000000' },
         // Open Graph
-        { property: 'og:title', content: 'Impostor - Juego de Deducción Social' },
-        { property: 'og:description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us.' },
+        { property: 'og:title', content: 'Impostor - Juego de Deducción Social Online Gratis' },
+        { property: 'og:description', content: 'Juega Impostor Online GRATIS - El mejor juego de deducción social en español. Crea salas, invita amigos y descubre quién es el impostor.' },
         { property: 'og:type', content: 'website' },
         { property: 'og:url', content: 'https://impostor.bbauti.ar' },
         { property: 'og:image', content: 'https://impostor.bbauti.ar/og-image.png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:image:alt', content: 'Impostor - Juego de Deducción Social Online' },
+        { property: 'og:locale', content: 'es_ES' },
+        { property: 'og:site_name', content: 'Impostor' },
         // Twitter
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: 'Impostor - Juego de Deducción Social' },
-        { name: 'twitter:description', content: 'Juega Impostor, un juego de deducción social inspirado en Among Us.' },
-        { name: 'twitter:image', content: 'https://impostor.bbauti.ar/og-image.png' }
+        { name: 'twitter:title', content: 'Impostor - Juego de Deducción Social Online Gratis' },
+        { name: 'twitter:description', content: 'Juega Impostor Online GRATIS - El mejor juego de deducción social. Crea salas, invita amigos y descubre quién es el impostor.' },
+        { name: 'twitter:image', content: 'https://impostor.bbauti.ar/og-image.png' },
+        { name: 'twitter:image:alt', content: 'Impostor - Juego de Deducción Social Online' }
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'canonical', href: 'https://impostor.bbauti.ar' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/png', sizes: '96x96', href: '/favicon-96x96.png' },
+        { rel: 'shortcut icon', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+        { rel: 'canonical', href: 'https://impostor.bbauti.ar' },
+        // Preconnect for performance
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'dns-prefetch', href: 'https://fonts.googleapis.com' }
       ]
     }
   },
@@ -56,6 +72,14 @@ export default defineNuxtConfig({
     options: {
       strict: true
     }
+  },
+
+  // SEO Configuration
+  site: {
+    url: 'https://impostor.bbauti.ar',
+    name: 'Impostor - Juego de Deducción Social Online',
+    description: 'Juega Impostor Online GRATIS - El mejor juego de deducción social en español. Crea salas privadas, invita amigos y descubre quién es el impostor.',
+    defaultLocale: 'es'
   },
 
   runtimeConfig: {
@@ -154,6 +178,10 @@ export default defineNuxtConfig({
     }
   },
 
+  ogImage: {
+    enabled: false
+  },
+
   pwa: {
     devOptions: {
       enabled: false
@@ -212,10 +240,53 @@ export default defineNuxtConfig({
           src: '/favicon.ico',
           sizes: '48x48',
           type: 'image/x-icon'
+        },
+        {
+          src: '/web-app-manifest-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'maskable'
+        },
+        {
+          src: '/web-app-manifest-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable'
+        },
+        {
+          src: '/apple-touch-icon.png',
+          sizes: '180x180',
+          type: 'image/png',
+          purpose: 'apple touch icon'
         }
       ],
       categories: ['games', 'entertainment'],
       lang: 'es'
+    }
+  },
+
+  // Robots configuration
+  robots: {
+    disallow: ['/room/'],
+    sitemap: '/sitemap.xml'
+  },
+
+  // Schema.org configuration
+  schemaOrg: {
+    identity: {
+      type: 'Organization',
+      name: 'Impostor',
+      url: 'https://impostor.bbauti.ar',
+      logo: 'https://impostor.bbauti.ar/web-app-manifest-512x512.png'
+    }
+  },
+
+  // Sitemap configuration
+  sitemap: {
+    exclude: ['/room/**'],
+    defaults: {
+      changefreq: 'weekly',
+      priority: 1
     }
   },
 

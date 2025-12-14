@@ -11,17 +11,6 @@ export const DEFAULT_TIME_LIMIT = 10; // minutes
 
 // Phase durations (in milliseconds)
 export const ROLE_REVEAL_DURATION = 10000; // 10 seconds
-export const AUTO_READY_TIMEOUT = 30000; // 30 seconds
-
-// Room cleanup (in milliseconds)
-export const ROOM_EMPTY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
-export const ROOM_ENDED_TIMEOUT = 1 * 60 * 1000; // 1 minute
-
-// WebSocket
-export const WS_PING_INTERVAL = 30000; // 30 seconds
-export const WS_MISSED_PINGS_LIMIT = 3;
-export const WS_RECONNECT_ATTEMPTS = 5;
-export const WS_RECONNECT_DELAY = 2000; // 2 seconds
 
 // LocalStorage keys
 export const LS_PLAYER_ID = 'impostor_player_id';

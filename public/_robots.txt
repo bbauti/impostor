@@ -1,0 +1,5 @@
+User-Agent: *
+Allow: /
+Disallow: /room/
+
+Sitemap: https://impostor.bbauti.ar/sitemap.xml
