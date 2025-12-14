@@ -104,8 +104,7 @@ export default defineNuxtConfig({
 
   // Performance optimizations
   experimental: {
-    // Enable payload extraction for faster navigation
-    payloadExtraction: true,
+    payloadExtraction: false,
     // Enable render JSON payload as inline script
     inlineRouteRules: true,
     // Enable headNext for better head management
@@ -114,6 +113,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
   nitro: {
+    preset: 'cloudflare-pages',
     minify: true,
     compressPublicAssets: {
       gzip: true,
