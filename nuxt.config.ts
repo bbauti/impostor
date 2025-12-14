@@ -118,6 +118,10 @@ export default defineNuxtConfig({
     compressPublicAssets: {
       gzip: true,
       brotli: true
+    },
+    // Prerender routes for better Cloudflare compatibility
+    prerender: {
+      routes: ['/sitemap.xml', '/robots.txt']
     }
   },
 
