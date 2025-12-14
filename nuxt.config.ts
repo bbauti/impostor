@@ -10,8 +10,9 @@ export default defineNuxtConfig({
     '@nuxtjs/mdc',
     '@nuxtjs/supabase',
     'vue-sonner/nuxt',
-    '@vite-pwa/nuxt',
-    '@nuxtjs/seo'
+    '@vite-pwa/nuxt'
+    // Removed @nuxtjs/seo due to Cloudflare Workers incompatibility
+    // Using manual SEO meta tags in app.head instead
   ],
 
   devtools: { enabled: true },
@@ -74,13 +75,7 @@ export default defineNuxtConfig({
     }
   },
 
-  // SEO Configuration
-  site: {
-    url: 'https://impostor.bbauti.ar',
-    name: 'Impostor - Juego de Deducción Social Online',
-    description: 'Juega Impostor Online GRATIS - El mejor juego de deducción social en español. Crea salas privadas, invita amigos y descubre quién es el impostor.',
-    defaultLocale: 'es'
-  },
+
 
   runtimeConfig: {
     public: {
@@ -118,10 +113,6 @@ export default defineNuxtConfig({
     compressPublicAssets: {
       gzip: true,
       brotli: true
-    },
-    // Prerender routes for better Cloudflare compatibility
-    prerender: {
-      routes: ['/sitemap.xml', '/robots.txt']
     }
   },
 
@@ -182,9 +173,7 @@ export default defineNuxtConfig({
     }
   },
 
-  ogImage: {
-    enabled: false
-  },
+
 
   pwa: {
     devOptions: {
