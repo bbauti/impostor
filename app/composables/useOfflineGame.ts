@@ -1,46 +1,55 @@
 import { ref, computed } from 'vue';
-import { selectSecretWord, formatTime } from '~/utils/game-logic';
+import { selectSecretWordWithCategory, formatTime } from '~/utils/game-logic';
 
 export interface OfflineSettings {
   playerCount: number;
   impostorCount: number;
   categories: string[];
-  timeLimit: number; // en segundos
+  timeLimit: number;
+  showCategoryToImpostor?: boolean;
 }
 
 interface OfflinePlayer {
   index: number;
+  name: string;
   isImpostor: boolean;
+  hasSeenRole: boolean;
 }
 
-type OfflinePhase = 'role_reveal' | 'timer' | 'ended';
+type OfflinePhase = 'player_names' | 'role_reveal' | 'timer' | 'ended';
 
 export const useOfflineGame = () => {
-  // Estado
-  const phase = ref<OfflinePhase>('role_reveal');
+  const phase = ref<OfflinePhase>('player_names');
   const settings = ref<OfflineSettings | null>(null);
   const secretWord = ref('');
+  const secretCategory = ref('');
   const players = ref<OfflinePlayer[]>([]);
-  const currentPlayerIndex = ref(1);
+  const currentPlayerIndex = ref<number | null>(null);
   const showingRole = ref(false);
   const timeRemaining = ref(0);
   const timerInterval = ref<ReturnType<typeof setInterval> | null>(null);
   const wakeLock = ref<WakeLockSentinel | null>(null);
+  const playerNamesInput = ref<string[]>([]);
+  const skipPlayerNames = ref(false);
 
-  // Computados
   const currentPlayer = computed(() =>
-    players.value.find(p => p.index === currentPlayerIndex.value)
+    currentPlayerIndex.value !== null
+      ? players.value.find(p => p.index === currentPlayerIndex.value)
+      : null
   );
 
   const formattedTimeRemaining = computed(() =>
     formatTime(timeRemaining.value)
   );
 
-  const isLastPlayer = computed(() =>
-    currentPlayerIndex.value === settings.value?.playerCount
+  const allPlayersHaveSeenRole = computed(() =>
+    players.value.every(p => p.hasSeenRole)
   );
 
-  // Wake Lock - mantener pantalla encendida
+  const showCategoryToImpostor = computed(() =>
+    settings.value?.showCategoryToImpostor ?? false
+  );
+
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
       try {
@@ -57,50 +66,73 @@ export const useOfflineGame = () => {
     }
   };
 
-  // Inicializar juego
   const initGame = async (gameSettings: OfflineSettings) => {
     settings.value = gameSettings;
-    secretWord.value = selectSecretWord(gameSettings.categories);
+    
+    const wordSelection = selectSecretWordWithCategory(gameSettings.categories);
+    secretWord.value = wordSelection.word;
+    secretCategory.value = wordSelection.categoryName;
 
-    // Crear jugadores
+    playerNamesInput.value = Array(gameSettings.playerCount).fill('');
+    phase.value = 'player_names';
+    currentPlayerIndex.value = null;
+    showingRole.value = false;
+    timeRemaining.value = gameSettings.timeLimit;
+
+    await requestWakeLock();
+  };
+
+  const setupPlayers = (names?: string[]) => {
+    if (!settings.value) return;
+
     const allPlayers: OfflinePlayer[] = [];
-    for (let i = 1; i <= gameSettings.playerCount; i++) {
-      allPlayers.push({ index: i, isImpostor: false });
+    for (let i = 1; i <= settings.value.playerCount; i++) {
+      const providedName = names?.[i - 1]?.trim();
+      allPlayers.push({
+        index: i,
+        name: providedName || `Jugador ${i}`,
+        isImpostor: false,
+        hasSeenRole: false
+      });
     }
 
-    // Seleccionar impostores aleatoriamente
     const shuffled = [...allPlayers].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < gameSettings.impostorCount; i++) {
-      shuffled[i].isImpostor = true;
+    for (let i = 0; i < settings.value.impostorCount; i++) {
+      shuffled[i]!.isImpostor = true;
     }
 
     players.value = allPlayers;
     phase.value = 'role_reveal';
-    currentPlayerIndex.value = 1;
+  };
+
+  const skipNamesAndStart = () => {
+    skipPlayerNames.value = true;
+    setupPlayers();
+  };
+
+  const confirmNamesAndStart = () => {
+    setupPlayers(playerNamesInput.value);
+  };
+
+  const selectPlayer = (playerIndex: number) => {
+    const player = players.value.find(p => p.index === playerIndex);
+    if (player && !player.hasSeenRole) {
+      currentPlayerIndex.value = playerIndex;
+      showingRole.value = true;
+    }
+  };
+
+  const hideRole = () => {
+    if (currentPlayerIndex.value !== null) {
+      const player = players.value.find(p => p.index === currentPlayerIndex.value);
+      if (player) {
+        player.hasSeenRole = true;
+      }
+    }
     showingRole.value = false;
-    timeRemaining.value = gameSettings.timeLimit;
-
-    // Activar wake lock
-    await requestWakeLock();
+    currentPlayerIndex.value = null;
   };
 
-  // Revelar rol
-  const revealRole = () => {
-    showingRole.value = true;
-  };
-
-  // Siguiente jugador
-  const nextPlayer = () => {
-    if (isLastPlayer.value) {
-      startTimer();
-    }
-    else {
-      currentPlayerIndex.value++;
-      showingRole.value = false;
-    }
-  };
-
-  // Iniciar timer
   const startTimer = () => {
     phase.value = 'timer';
     timerInterval.value = setInterval(() => {
@@ -114,7 +146,6 @@ export const useOfflineGame = () => {
     }, 1000);
   };
 
-  // Terminar juego
   const endGame = async () => {
     if (timerInterval.value) {
       clearInterval(timerInterval.value);
@@ -124,7 +155,6 @@ export const useOfflineGame = () => {
     await releaseWakeLock();
   };
 
-  // Limpiar al desmontar
   const cleanup = async () => {
     if (timerInterval.value) {
       clearInterval(timerInterval.value);
@@ -134,24 +164,28 @@ export const useOfflineGame = () => {
   };
 
   return {
-    // Estado
     phase,
     settings,
     secretWord,
+    secretCategory,
     players,
     currentPlayerIndex,
     showingRole,
     timeRemaining,
+    playerNamesInput,
+    skipPlayerNames,
 
-    // Computados
     currentPlayer,
     formattedTimeRemaining,
-    isLastPlayer,
+    allPlayersHaveSeenRole,
+    showCategoryToImpostor,
 
-    // Acciones
     initGame,
-    revealRole,
-    nextPlayer,
+    setupPlayers,
+    skipNamesAndStart,
+    confirmNamesAndStart,
+    selectPlayer,
+    hideRole,
     startTimer,
     endGame,
     cleanup

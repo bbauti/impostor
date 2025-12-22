@@ -17,6 +17,7 @@ export interface RoomUpdatePayload {
 export interface RoleAssignedPayload {
   role: 'impostor' | 'player';
   word: string | null;
+  category?: string;
 }
 
 export interface PhaseChangePayload {

@@ -9,6 +9,7 @@ export interface GameSettings {
   impostorCount: number;
   categories: string[];
   timeLimit: number; // in seconds
+  showCategoryToImpostor?: boolean; // Show word category to impostor (default: false)
 }
 
 export interface PublicRoomListItem {
@@ -54,3 +55,5 @@ export interface GameOverData {
   impostorIds: string[];
   players: Player[];
 }
+
+

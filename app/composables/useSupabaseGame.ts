@@ -16,12 +16,19 @@ interface BroadcastPayload {
   payload: unknown;
 }
 
+interface ReconnectionState {
+  playerName: string;
+  isReady: boolean;
+  status: PresencePayload['status'];
+}
+
 export const useSupabaseGame = () => {
   const supabase = useSupabaseClient();
 
   const channel = ref<RealtimeChannel | null>(null);
   const connected = ref(false);
   const connecting = ref(false);
+  const reconnecting = ref(false);
   const currentRoomId = ref<string | null>(null);
   const currentPlayerId = ref<string | null>(null);
   const roomSettings = ref<GameSettings | null>(null);
@@ -30,6 +37,10 @@ export const useSupabaseGame = () => {
   const cleanupTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null);
   const syncPlayersDebounce = ref<NodeJS.Timeout | null>(null);
   const cleanupAbortController = ref<AbortController | null>(null);
+  const reconnectionState = ref<ReconnectionState | null>(null);
+  const visibilityHandler = ref<(() => void) | null>(null);
+  const reconnectAttempts = ref(0);
+  const maxReconnectAttempts = 5;
 
   const eventHandlers = new Map<string, ((payload: unknown) => void)[]>();
 
@@ -256,13 +267,17 @@ export const useSupabaseGame = () => {
       emit(payload.type, payload.payload);
     });
 
-    // Subscribe and track presence
     roomChannel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         connected.value = true;
         connecting.value = false;
 
-        // Track this player's presence
+        reconnectionState.value = {
+          playerName,
+          isReady: false,
+          status: 'waiting'
+        };
+
         await roomChannel.track({
           playerId: currentPlayerId.value,
           playerName,
@@ -272,19 +287,39 @@ export const useSupabaseGame = () => {
           joinedAt: Date.now()
         } as PresencePayload);
 
+        setupVisibilityHandler();
+
         emit('CONNECT', { playerId: currentPlayerId.value, roomId });
       }
       else if (status === 'CHANNEL_ERROR') {
         connecting.value = false;
-        emit('ERROR', { message: 'Error connecting to room' });
+        connected.value = false;
+        if (reconnectionState.value) {
+          handleReconnection();
+        }
+        else {
+          emit('ERROR', { message: 'Error connecting to room' });
+        }
       }
       else if (status === 'TIMED_OUT') {
         connecting.value = false;
-        emit('ERROR', { message: 'Connection timed out' });
+        connected.value = false;
+        if (reconnectionState.value) {
+          handleReconnection();
+        }
+        else {
+          emit('ERROR', { message: 'Connection timed out' });
+        }
       }
       else if (status === 'CLOSED') {
         connecting.value = false;
-        emit('ERROR', { message: 'Connection closed' });
+        connected.value = false;
+        if (reconnectionState.value && currentRoomId.value) {
+          handleReconnection();
+        }
+        else {
+          emit('ERROR', { message: 'Connection closed' });
+        }
       }
     });
 
@@ -292,25 +327,25 @@ export const useSupabaseGame = () => {
   };
 
   const leaveRoom = async () => {
-    // Clear sync players debounce
+    cleanupVisibilityHandler();
+    reconnectionState.value = null;
+    reconnectAttempts.value = 0;
+
     if (syncPlayersDebounce.value) {
       clearTimeout(syncPlayersDebounce.value);
       syncPlayersDebounce.value = null;
     }
 
-    // Abort any pending cleanup operations
     if (cleanupAbortController.value) {
       cleanupAbortController.value.abort();
       cleanupAbortController.value = null;
     }
 
-    // Clear cleanup timeout
     if (cleanupTimeoutId.value) {
       clearTimeout(cleanupTimeoutId.value);
       cleanupTimeoutId.value = null;
     }
 
-    // Clear event handlers to prevent memory leak
     eventHandlers.clear();
 
     if (channel.value && currentRoomId.value) {
@@ -353,6 +388,10 @@ export const useSupabaseGame = () => {
     const currentPresence = presenceState[currentPlayerId.value]?.[0];
 
     if (currentPresence) {
+      if (reconnectionState.value) {
+        reconnectionState.value.isReady = true;
+        reconnectionState.value.status = 'ready';
+      }
       await channel.value.track({
         ...currentPresence,
         isReady: true,
@@ -368,6 +407,9 @@ export const useSupabaseGame = () => {
     const currentPresence = presenceState[currentPlayerId.value]?.[0];
 
     if (currentPresence) {
+      if (reconnectionState.value) {
+        reconnectionState.value.status = status;
+      }
       await channel.value.track({
         ...currentPresence,
         status
@@ -477,20 +519,121 @@ export const useSupabaseGame = () => {
     }
   };
 
+  const handleReconnection = async () => {
+    if (!currentRoomId.value || !currentPlayerId.value || !reconnectionState.value) {
+      return;
+    }
+
+    if (reconnecting.value || connecting.value) {
+      return;
+    }
+
+    reconnecting.value = true;
+    reconnectAttempts.value++;
+
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.value - 1), 10000);
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    try {
+      if (channel.value) {
+        const state = channel.value.state;
+        if (state === 'joined') {
+          await channel.value.track({
+            playerId: currentPlayerId.value,
+            playerName: reconnectionState.value.playerName,
+            isReady: reconnectionState.value.isReady,
+            isHost: false,
+            status: reconnectionState.value.status,
+            joinedAt: Date.now()
+          } as PresencePayload);
+          
+          reconnecting.value = false;
+          reconnectAttempts.value = 0;
+          emit('RECONNECT', { playerId: currentPlayerId.value, roomId: currentRoomId.value });
+          return;
+        }
+      }
+
+      if (channel.value) {
+        await supabase.removeChannel(channel.value);
+        channel.value = null;
+      }
+
+      await joinRoom(
+        currentRoomId.value,
+        reconnectionState.value.playerName,
+        currentPlayerId.value,
+        roomSettings.value || undefined,
+        roomCreatorId.value || undefined
+      );
+
+      reconnectAttempts.value = 0;
+    }
+    catch {
+      if (reconnectAttempts.value < maxReconnectAttempts) {
+        setTimeout(handleReconnection, 1000);
+      }
+      else {
+        emit('ERROR', { message: 'No se pudo reconectar. Por favor recarga la página.' });
+      }
+    }
+    finally {
+      reconnecting.value = false;
+    }
+  };
+
+  const setupVisibilityHandler = () => {
+    if (typeof document === 'undefined') return;
+
+    if (visibilityHandler.value) {
+      document.removeEventListener('visibilitychange', visibilityHandler.value);
+    }
+
+    visibilityHandler.value = () => {
+      if (document.visibilityState === 'visible') {
+        if (currentRoomId.value && currentPlayerId.value && reconnectionState.value) {
+          if (!connected.value || channel.value?.state !== 'joined') {
+            handleReconnection();
+          }
+          else if (channel.value) {
+            channel.value.track({
+              playerId: currentPlayerId.value,
+              playerName: reconnectionState.value.playerName,
+              isReady: reconnectionState.value.isReady,
+              isHost: false,
+              status: reconnectionState.value.status,
+              joinedAt: Date.now()
+            } as PresencePayload).catch(() => {
+              handleReconnection();
+            });
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', visibilityHandler.value);
+  };
+
+  const cleanupVisibilityHandler = () => {
+    if (typeof document !== 'undefined' && visibilityHandler.value) {
+      document.removeEventListener('visibilitychange', visibilityHandler.value);
+      visibilityHandler.value = null;
+    }
+  };
+
   onUnmounted(() => {
-    // Clear event handlers explicitly to prevent memory leak
     eventHandlers.clear();
+    cleanupVisibilityHandler();
     leaveRoom();
   });
 
   return {
-    // State
     connected,
     connecting,
+    reconnecting,
     currentPlayerId,
     currentRoomId,
 
-    // Methods
     joinRoom,
     leaveRoom,
     markReady,
@@ -500,8 +643,10 @@ export const useSupabaseGame = () => {
     castVote,
     transitionPhase,
 
-    // Event handling
     on,
-    off
+    off,
+    
+    setupVisibilityHandler,
+    handleReconnection
   };
 };

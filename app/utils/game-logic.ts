@@ -1,10 +1,11 @@
-import { getRandomWord } from '~/data/words';
+import { getRandomWord, getRandomWordWithCategory, type WordSelection } from '~/data/words';
 
-/**
- * Select a random word from the configured categories
- */
 export function selectSecretWord(categories: string[]): string {
   return getRandomWord(categories);
+}
+
+export function selectSecretWordWithCategory(categories: string[]): WordSelection {
+  return getRandomWordWithCategory(categories);
 }
 
 /**

@@ -122,7 +122,7 @@ onMounted(async () => {
 
   game.on('ROLE_ASSIGNED', (payload: unknown) => {
     const roleData = payload as RoleAssignedPayload;
-    gameState.setRole(roleData.role === 'impostor', roleData.word);
+    gameState.setRole(roleData.role === 'impostor', roleData.word, roleData.category);
   });
 
   game.on('PHASE_CHANGE', (payload: any) => {
@@ -138,7 +138,6 @@ onMounted(async () => {
       soundEffects.play('callVote');
     }
 
-    // Load chat messages when entering discussion phase
     if (payload.phase === 'discussion') {
       roomChat.loadMessages(roomId);
     }
@@ -261,7 +260,7 @@ const handleCastVote = (targetId: string | null) => {
   game.castVote(targetId);
 
   if (gameState.currentPlayerId.value) {
-    gameState.setVote(gameState.currentPlayerId.value, targetId || '');
+      gameState.setVote(gameState.currentPlayerId.value, targetId || '');
   }
 };
 
@@ -446,7 +445,7 @@ const handleSendMessage = async (content: string) => {
                   </div>
                 </div>
 
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                   <UButton
                     v-if="!gameState.isReady.value && !gameState.isHost.value"
                     @click="game.markReady()"
@@ -473,6 +472,8 @@ const handleSendMessage = async (content: string) => {
           v-else-if="gameState.phase.value === 'role_reveal'"
           :is-impostor="gameState.isImpostor.value"
           :secret-word="gameState.secretWord.value"
+          :secret-category="gameState.secretCategory.value"
+          :show-category-to-impostor="gameState.settings.value?.showCategoryToImpostor ?? false"
         />
 
         <!-- Discussion Phase -->
@@ -527,5 +528,21 @@ const handleSendMessage = async (content: string) => {
         </ProseP>
       </div>
     </template>
+
+    <!-- Reconnection Banner -->
+    <Transition name="fade">
+      <div
+        v-if="game.reconnecting.value"
+        class="fixed top-0 left-0 right-0 bg-warning/90 text-warning-foreground py-2 px-4 text-center z-50"
+      >
+        <div class="flex items-center justify-center gap-2">
+          <Icon
+            name="lucide:loader-circle"
+            class="animate-spin"
+          />
+          <span>Reconectando...</span>
+        </div>
+      </div>
+    </Transition>
   </UPage>
 </template>

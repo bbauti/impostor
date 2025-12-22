@@ -222,11 +222,40 @@ export function getWordsForCategories(categoryIds: string[]): string[] {
   return allWords;
 }
 
-// Get random word from selected categories
-export function getRandomWord(categoryIds: string[]): string {
-  const words = getWordsForCategories(categoryIds);
-  if (words.length === 0) {
-    throw new Error('No words available for selected categories');
+export interface WordSelection {
+  word: string;
+  categoryId: string;
+  categoryName: string;
+}
+
+export function getRandomWordWithCategory(categoryIds: string[]): WordSelection {
+  if (categoryIds.length === 0) {
+    throw new Error('No categories selected');
   }
-  return words[Math.floor(Math.random() * words.length)];
+
+  const randomIndex = Math.floor(Math.random() * categoryIds.length);
+  const categoryId = categoryIds[randomIndex]!;
+  const category = categories.find(c => c.id === categoryId);
+  
+  let words: string[] = [];
+  if (categoryId in wordSets) {
+    words = wordSets[categoryId as keyof typeof wordSets];
+  } else if (categoryId in premiumWordSets) {
+    words = premiumWordSets[categoryId as keyof typeof premiumWordSets];
+  }
+
+  if (words.length === 0) {
+    throw new Error('No words available for selected category');
+  }
+
+  const wordIndex = Math.floor(Math.random() * words.length);
+  return {
+    word: words[wordIndex]!,
+    categoryId,
+    categoryName: category?.name ?? categoryId
+  };
+}
+
+export function getRandomWord(categoryIds: string[]): string {
+  return getRandomWordWithCategory(categoryIds).word;
 }

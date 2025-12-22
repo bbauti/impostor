@@ -17,6 +17,7 @@ export const useGameState = () => {
   // Role state (only set after role assignment)
   const isImpostor = useState<boolean>('isImpostor', () => false);
   const secretWord = useState<string | null>('secretWord', () => null);
+  const secretCategory = useState<string | null>('secretCategory', () => null);
 
   // Voting state
   const votes = useState<Record<string, string>>('votes', () => ({}));
@@ -75,9 +76,10 @@ export const useGameState = () => {
     currentPlayerId.value = id;
   };
 
-  const setRole = (impostor: boolean, word: string | null) => {
+  const setRole = (impostor: boolean, word: string | null, category?: string | null) => {
     isImpostor.value = impostor;
     secretWord.value = word;
+    secretCategory.value = category ?? null;
   };
 
   const updatePhase = (newPhase: GamePhase) => {
@@ -107,6 +109,7 @@ export const useGameState = () => {
     currentPlayerId.value = null;
     isImpostor.value = false;
     secretWord.value = null;
+    secretCategory.value = null;
     votes.value = {};
     voteRound.value = 0;
     timeRemaining.value = 0;
@@ -122,6 +125,7 @@ export const useGameState = () => {
     currentPlayer,
     isImpostor,
     secretWord,
+    secretCategory,
     votes,
     myVote,
     voteRound,
