@@ -1,8 +1,8 @@
-import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2"
 
 interface BroadcastOptions {
-  maxRetries?: number;
-  retryDelayMs?: number;
+  maxRetries?: number
+  retryDelayMs?: number
 }
 
 /**
@@ -14,37 +14,37 @@ export async function broadcastWithRetry(
   roomId: string,
   event: string,
   payload: unknown,
-  options: BroadcastOptions = {}
+  options: BroadcastOptions = {},
 ): Promise<boolean> {
-  const { maxRetries = 2, retryDelayMs = 100 } = options;
+  const { maxRetries = 2, retryDelayMs = 100 } = options
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const channel = supabase.channel(`room:${roomId}`);
+      const channel = supabase.channel(`room:${roomId}`)
 
       const result = await channel.send({
-        type: 'broadcast',
+        type: "broadcast",
         event,
-        payload
-      });
+        payload,
+      })
 
       // Clean up the temporary channel
-      await supabase.removeChannel(channel);
+      await supabase.removeChannel(channel)
 
-      if (result === 'ok') {
-        return true;
+      if (result === "ok") {
+        return true
       }
-    }
-    catch (error) {
-    }
+    } catch {}
 
     // Wait before retrying (exponential backoff)
     if (attempt < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, retryDelayMs * (attempt + 1)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, retryDelayMs * (attempt + 1)),
+      )
     }
   }
 
-  return false;
+  return false
 }
 
 /**
@@ -54,12 +54,12 @@ export async function broadcastGameEvent(
   supabase: SupabaseClient,
   roomId: string,
   eventType: string,
-  eventPayload: unknown
+  eventPayload: unknown,
 ): Promise<boolean> {
-  return broadcastWithRetry(supabase, roomId, 'game_event', {
+  return broadcastWithRetry(supabase, roomId, "game_event", {
     type: eventType,
-    payload: eventPayload
-  });
+    payload: eventPayload,
+  })
 }
 
 /**
@@ -70,10 +70,10 @@ export async function broadcastPrivateMessage(
   roomId: string,
   playerId: string,
   eventType: string,
-  eventPayload: unknown
+  eventPayload: unknown,
 ): Promise<boolean> {
   return broadcastWithRetry(supabase, roomId, `private:${playerId}`, {
     type: eventType,
-    payload: eventPayload
-  });
+    payload: eventPayload,
+  })
 }

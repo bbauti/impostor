@@ -1,86 +1,90 @@
-import { useCookie } from '#app';
+import { useCookie } from "#app"
 
-const SESSION_COOKIE_NAME = 'impostor_session';
-const SESSION_MAX_AGE = 10 * 60; // 10 minutes in seconds
-const ACTIVITY_UPDATE_THROTTLE = 60 * 1000; // Only update cookie every 60 seconds
+const SESSION_COOKIE_NAME = "impostor_session"
+const SESSION_MAX_AGE = 10 * 60 // 10 minutes in seconds
+const ACTIVITY_UPDATE_THROTTLE = 60 * 1000 // Only update cookie every 60 seconds
 
 export interface SessionData {
-  playerId: string;
-  playerName: string;
-  roomId?: string;
-  lastActivity: number;
+  playerId: string
+  playerName: string
+  roomId?: string
+  lastActivity: number
 }
 
 export const useSession = () => {
   const sessionCookie = useCookie<SessionData | null>(SESSION_COOKIE_NAME, {
     maxAge: SESSION_MAX_AGE,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    default: () => null
-  });
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    default: () => null,
+  })
 
-  const createSession = (playerId: string, playerName: string, roomId?: string) => {
+  const createSession = (
+    playerId: string,
+    playerName: string,
+    roomId?: string,
+  ) => {
     sessionCookie.value = {
       playerId,
       playerName,
       roomId,
-      lastActivity: Date.now()
-    };
-  };
+      lastActivity: Date.now(),
+    }
+  }
 
   const getSession = (): SessionData | null => {
-    return sessionCookie.value;
-  };
+    return sessionCookie.value
+  }
 
   const updateActivity = () => {
     if (sessionCookie.value) {
-      const now = Date.now();
-      const timeSinceLastUpdate = now - sessionCookie.value.lastActivity;
+      const now = Date.now()
+      const timeSinceLastUpdate = now - sessionCookie.value.lastActivity
 
       // Only update cookie if enough time has passed (throttled)
       // This prevents excessive cookie writes on frequent events
       if (timeSinceLastUpdate >= ACTIVITY_UPDATE_THROTTLE) {
         sessionCookie.value = {
           ...sessionCookie.value,
-          lastActivity: now
-        };
+          lastActivity: now,
+        }
       }
     }
-  };
+  }
 
   const updateRoomId = (roomId: string | undefined) => {
     if (sessionCookie.value) {
       sessionCookie.value = {
         ...sessionCookie.value,
         roomId,
-        lastActivity: Date.now()
-      };
+        lastActivity: Date.now(),
+      }
     }
-  };
+  }
 
   const clearSession = () => {
-    sessionCookie.value = null;
-  };
+    sessionCookie.value = null
+  }
 
   const isSessionValid = (): boolean => {
-    if (!sessionCookie.value) return false;
+    if (!sessionCookie.value) return false
 
-    const now = Date.now();
-    const elapsed = now - sessionCookie.value.lastActivity;
+    const now = Date.now()
+    const elapsed = now - sessionCookie.value.lastActivity
 
     // Session valid if less than 10 minutes have passed
-    return elapsed < SESSION_MAX_AGE * 1000;
-  };
+    return elapsed < SESSION_MAX_AGE * 1000
+  }
 
   const refreshSession = () => {
     if (sessionCookie.value && isSessionValid()) {
       // Update the cookie to reset its max-age timer
       sessionCookie.value = {
         ...sessionCookie.value,
-        lastActivity: Date.now()
-      };
+        lastActivity: Date.now(),
+      }
     }
-  };
+  }
 
   return {
     createSession,
@@ -89,6 +93,6 @@ export const useSession = () => {
     updateRoomId,
     clearSession,
     isSessionValid,
-    refreshSession
-  };
-};
+    refreshSession,
+  }
+}

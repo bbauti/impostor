@@ -1,37 +1,37 @@
-import type { ClientRoomInfo, GamePhase } from './game';
+import type { ClientRoomInfo, GamePhase } from "./game"
 
 export interface ConnectPayload {
-  playerId: string;
-  roomId: string;
+  playerId: string
+  roomId: string
 }
 
 export interface ReconnectPayload {
-  playerId: string;
-  roomId: string;
+  playerId: string
+  roomId: string
 }
 
 export interface RoomUpdatePayload {
-  room: ClientRoomInfo;
+  room: ClientRoomInfo
 }
 
 export interface RoleAssignedPayload {
-  role: 'impostor' | 'player';
-  word: string | null;
-  category?: string;
+  role: "impostor" | "player"
+  word: string | null
+  category?: string
 }
 
 export interface PhaseChangePayload {
-  phase: GamePhase;
-  timeRemaining?: number;
+  phase: GamePhase
+  timeRemaining?: number
 }
 
 export interface VoteUpdatePayload {
-  votes: Record<string, string>;
-  voterId: string;
-  targetId: string | null;
+  votes: Record<string, string>
+  voterId: string
+  targetId: string | null
 }
 
 export interface ErrorPayload {
-  message: string;
-  code?: string;
+  message: string
+  code?: string
 }
