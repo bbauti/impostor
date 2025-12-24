@@ -8,10 +8,13 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint . --fix --ignore-pattern .gitignore"
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsgo --noEmit --skipLibCheck"
   },
   "dependencies": {
-    "@nuxt/eslint": "1.11.0",
     "@nuxt/hints": "1.0.0-alpha.2",
     "@nuxt/icon": "2.1.0",
     "@nuxt/ui": "^4.2.1",
@@ -21,7 +24,6 @@
     "@sentry/nuxt": "^10.30.0",
     "@vite-pwa/nuxt": "^1.1.0",
     "@vueuse/core": "12.8.2",
-    "eslint": "^9.0.0",
     "nanoid": "^5.1.6",
     "nuxt": "^4.2.1",
     "vue": "^3.5.25",
@@ -32,12 +34,16 @@
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
+    "@mxyhi/tsgo": "^0.1.0",
+    "oxfmt": "^0.1.0",
+    "oxlint": "^1.0.0",
     "@iconify-json/lucide": "^1.2.76",
     "@nuxt/image": "^2.0.0",
     "@types/ws": "^8.18.1",
     "vite-plugin-pwa": "^1.2.0"
   },
   "overrides": {
-    "@vueuse/core": "12.8.2"
+    "@vueuse/core": "12.8.2",
+    "vite": "npm:rolldown-vite@latest"
   }
 }

@@ -28,10 +28,6 @@ export const useSoundEffects = () => {
   const isMuted = useState<boolean>('soundMuted', () => false);
   const audioCache = useState<Map<SoundType, HTMLAudioElement>>('audioCache', () => new Map());
   const isInitialized = useState<boolean>('soundInitialized', () => false);
-  
-  // Mobile audio manager integration
-  const mobileAudioManager = useMobileAudioManager();
-  const audioRegistered = useState<boolean>('audioRegistered', () => false);
 
   const initFromStorage = () => {
     if (import.meta.client && !isInitialized.value) {
@@ -50,11 +46,6 @@ export const useSoundEffects = () => {
         audio.preload = 'auto';
         audio.volume = config.volume;
         audioCache.value.set(key as SoundType, audio);
-        
-        // Register with mobile audio manager for lifecycle management
-        if (mobileAudioManager.isMobile()) {
-          mobileAudioManager.registerAudio(key as SoundType, audio);
-        }
       }
     });
   };
@@ -68,17 +59,11 @@ export const useSoundEffects = () => {
     const audio = new Audio(config.src);
     audio.volume = config.volume;
     audioCache.value.set(type, audio);
-    
-    // Register with mobile audio manager for lifecycle management
-    if (mobileAudioManager.isMobile()) {
-      mobileAudioManager.registerAudio(type, audio);
-    }
-    
     return audio;
   };
 
   const play = (type: SoundType) => {
-    if (!import.meta.client || isMuted.value || mobileAudioManager.isBackgrounded.value) return;
+    if (!import.meta.client || isMuted.value) return;
 
     try {
       const audio = getAudio(type);
@@ -106,36 +91,13 @@ export const useSoundEffects = () => {
     }
   };
 
-  // Register existing audio elements with mobile manager
-  const registerExistingAudio = () => {
-    if (!mobileAudioManager.isMobile() || audioRegistered.value) return;
-    
-    audioCache.value.forEach((audio, type) => {
-      mobileAudioManager.registerAudio(type as SoundType, audio);
-    });
-    
-    audioRegistered.value = true;
-  };
-
   onMounted(() => {
     initFromStorage();
     preloadSounds();
-    registerExistingAudio();
   });
-
-  // Watch for mobile audio manager initialization
-  watch(
-    () => mobileAudioManager.isMobile,
-    (isMobile) => {
-      if (isMobile && !audioRegistered.value) {
-        registerExistingAudio();
-      }
-    }
-  );
 
   return {
     isMuted: readonly(isMuted),
-    isBackgrounded: mobileAudioManager.isBackgrounded,
     play,
     toggleMute,
     setMuted,

@@ -38,3 +38,38 @@
     background-color: #474747;
   }
 }
+
+/* Mobile Input Fixes - Prevent iOS Zooming */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+textarea {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Target mobile only - ensure 16px minimum font size to prevent zoom */
+@media (max-width: 768px) {
+  input, 
+  textarea {
+    font-size: 16px !important;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Specific override for the room code input which uses text-2xl */
+  .text-2xl {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent double-tap zoom on interactive elements */
+button, 
+a, 
+[role="button"] {
+  touch-action: manipulation;
+}

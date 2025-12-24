@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import"],
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "globals": {
+    "defineNuxtConfig": "readonly",
+    "definePageMeta": "readonly",
+    "useHead": "readonly",
+    "useFetch": "readonly",
+    "useAsyncData": "readonly",
+    "useRoute": "readonly",
+    "useRouter": "readonly",
+    "ref": "readonly",
+    "computed": "readonly",
+    "watch": "readonly",
+    "onMounted": "readonly",
+    "onUnmounted": "readonly",
+    "defineProps": "readonly",
+    "defineEmits": "readonly",
+    "withDefaults": "readonly"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-debugger": "error",
+    "no-nested-ternary": "error",
+    "curly": ["error", "multi-line"],
+    "no-constant-binary-expression": "error",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
+  },
+  "ignorePatterns": [
+    "node_modules",
+    ".nuxt",
+    ".output",
+    "dist",
+    "*.min.js"
+  ]
+}

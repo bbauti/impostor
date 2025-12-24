@@ -1,8 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [
+modules: [
     '@sentry/nuxt/module',
-    '@nuxt/eslint',
     '@nuxt/hints',
     '@nuxt/icon',
     '@nuxt/image',
@@ -24,7 +23,7 @@ export default defineNuxtConfig({
         lang: 'es'
       },
       title: 'Impostor - Juego de Deducción Social',
-      viewport: 'width=device-width, initial-scale=1',
+      viewport: 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=yes',
       charset: 'utf-8',
       meta: [
         // Primary SEO
@@ -140,17 +139,6 @@ export default defineNuxtConfig({
     },
     optimizeDeps: {
       include: ['@vueuse/core']
-    }
-  },
-
-  eslint: {
-    config: {
-      stylistic: {
-        indent: 2,
-        semi: true,
-        quotes: 'single',
-        commaDangle: 'never'
-      }
     }
   },
 
