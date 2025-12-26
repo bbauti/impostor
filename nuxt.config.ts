@@ -31,7 +31,7 @@ export default defineNuxtConfig({
         {
           name: "description",
           content:
-            "Juega Impostor Online GRATIS - El mejor juego de deducción social en español. Crea salas privadas, invita amigos y descubre quién es el impostor. Sin descargas, juega desde el navegador.",
+            "Juega Impostor Online GRATIS - El mejor juego de deducción social en español. Crea salas, invita amigos y descubre al impostor. Sin descargas.",
         },
         {
           name: "keywords",
@@ -105,7 +105,13 @@ export default defineNuxtConfig({
           href: "/apple-touch-icon.png",
         },
         { rel: "canonical", href: "https://impostor.bbauti.ar" },
-        // Preconnect for performance
+        { rel: "alternate", hreflang: "es", href: "https://impostor.bbauti.ar/" },
+        { rel: "alternate", hreflang: "es-AR", href: "https://impostor.bbauti.ar/" },
+        { rel: "alternate", hreflang: "es-MX", href: "https://impostor.bbauti.ar/" },
+        { rel: "alternate", hreflang: "es-ES", href: "https://impostor.bbauti.ar/" },
+        { rel: "alternate", hreflang: "es-CL", href: "https://impostor.bbauti.ar/" },
+        { rel: "alternate", hreflang: "es-CO", href: "https://impostor.bbauti.ar/" },
+        { rel: "alternate", hreflang: "x-default", href: "https://impostor.bbauti.ar/" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         {
           rel: "preconnect",
@@ -156,6 +162,12 @@ export default defineNuxtConfig({
   },
   compatibilityDate: "2025-07-15",
 
+  routeRules: {
+    "/": { prerender: true },
+    "/_nuxt/**": { headers: { "Cache-Control": "public, max-age=31536000, immutable" } },
+    "/room/**": { ssr: false },
+  },
+
   nitro: {
     preset: "cloudflare-pages",
     minify: true,
@@ -163,21 +175,23 @@ export default defineNuxtConfig({
       gzip: true,
       brotli: true,
     },
+    prerender: {
+      crawlLinks: true,
+      routes: ["/"],
+    },
   },
 
   // Vue and Vite optimizations
   vite: {
     build: {
-      // Enable minification
       minify: "esbuild",
-      // Optimize CSS code splitting
       cssCodeSplit: true,
-      // Target modern browsers for smaller bundles
       target: "esnext",
-      // Smaller chunk size warning limit
       chunkSizeWarningLimit: 1000,
-      // Enable CSS minification
       cssMinify: true,
+      modulePreload: {
+        polyfill: false,
+      },
     },
     // Enable CSS optimization
     css: {
@@ -204,11 +218,23 @@ export default defineNuxtConfig({
     },
   },
 
-  // Icon optimization
   icon: {
     serverBundle: {
       collections: ["heroicons", "lucide"],
     },
+  },
+
+  image: {
+    quality: 80,
+    format: ["avif", "webp"],
+    screens: {
+      xs: 320,
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+    },
+    densities: [1, 2],
   },
 
   pwa: {
@@ -294,31 +320,6 @@ export default defineNuxtConfig({
       ],
       categories: ["games", "entertainment"],
       lang: "es",
-    },
-  },
-
-  // Robots configuration
-  robots: {
-    disallow: ["/room/"],
-    sitemap: "/sitemap.xml",
-  },
-
-  // Schema.org configuration
-  schemaOrg: {
-    identity: {
-      type: "Organization",
-      name: "Impostor",
-      url: "https://impostor.bbauti.ar",
-      logo: "https://impostor.bbauti.ar/web-app-manifest-512x512.png",
-    },
-  },
-
-  // Sitemap configuration
-  sitemap: {
-    exclude: ["/room/**"],
-    defaults: {
-      changefreq: "weekly",
-      priority: 1,
     },
   },
 
