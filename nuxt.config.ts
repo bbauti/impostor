@@ -119,6 +119,8 @@ export default defineNuxtConfig({
           crossorigin: "",
         },
         { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
+        { rel: "dns-prefetch", href: "https://www.googletagmanager.com" },
+        { rel: "dns-prefetch", href: "https://www.google-analytics.com" },
       ],
     },
   },
@@ -136,6 +138,9 @@ export default defineNuxtConfig({
     public: {
       sentry: {
         dsn: process.env.NUXT_PUBLIC_SENTRY_DSN,
+      },
+      googleAnalytics: {
+        id: process.env.NUXT_PUBLIC_GOOGLE_ANALYTICS || '',
       },
     },
   },
