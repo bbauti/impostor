@@ -290,6 +290,8 @@ export const useSupabaseGame = () => {
 
         sentry.logConnection("connect", { roomId, playerId: currentPlayerId.value })
         sentry.setUser(currentPlayerId.value!, playerName)
+        sentry.metricConnectionEstablished()
+        sentry.metricPlayerJoined(roomId)
 
         reconnectionState.value = {
           playerName,
@@ -311,6 +313,7 @@ export const useSupabaseGame = () => {
         emit("CONNECT", { playerId: currentPlayerId.value, roomId })
       } else if (status === "CHANNEL_ERROR") {
         sentry.logConnection("error", { roomId, status: "CHANNEL_ERROR" })
+        sentry.metricConnectionError("channel_error")
         connecting.value = false
         connected.value = false
         if (reconnectionState.value) {
@@ -320,6 +323,7 @@ export const useSupabaseGame = () => {
         }
       } else if (status === "TIMED_OUT") {
         sentry.logConnection("timeout", { roomId })
+        sentry.metricConnectionError("timeout")
         connecting.value = false
         connected.value = false
         if (reconnectionState.value) {
@@ -345,6 +349,7 @@ export const useSupabaseGame = () => {
   const leaveRoom = async () => {
     if (currentRoomId.value) {
       sentry.logRoom("leave", currentRoomId.value)
+      sentry.metricPlayerLeft(currentRoomId.value)
     }
     sentry.clearRoomContext()
     sentry.clearUser()
@@ -405,6 +410,7 @@ export const useSupabaseGame = () => {
     if (!channel.value || !currentPlayerId.value) return
 
     sentry.logPlayer("ready", currentPlayerId.value)
+    sentry.metricPlayerReady()
 
     const presenceState = channel.value.presenceState<PresencePayload>()
     const currentPresence = presenceState[currentPlayerId.value]?.[0]
@@ -442,8 +448,6 @@ export const useSupabaseGame = () => {
   const startGame = async () => {
     if (!currentRoomId.value || !currentPlayerId.value || !channel.value) return
 
-    sentry.logGameAction("start_game", { roomId: currentRoomId.value, playerId: currentPlayerId.value })
-
     const presenceState = channel.value.presenceState<PresencePayload>()
 
     // Sort by joinedAt for consistent ordering
@@ -463,6 +467,10 @@ export const useSupabaseGame = () => {
       isReady: p.isReady,
       isHost: p.playerId === hostPlayerId,
     }))
+
+    const impostorCount = roomSettings.value?.impostorCount || 1
+    sentry.logGameAction("start_game", { roomId: currentRoomId.value, playerId: currentPlayerId.value, playerCount: players.length })
+    sentry.metricGameStarted(players.length, impostorCount)
 
     const { error } = await supabase.functions.invoke("start-game", {
       body: {
@@ -486,6 +494,7 @@ export const useSupabaseGame = () => {
     if (!currentRoomId.value || !currentPlayerId.value) return
 
     sentry.logGameAction("call_vote", { roomId: currentRoomId.value, playerId: currentPlayerId.value })
+    sentry.metricVoteCalled(currentRoomId.value)
 
     const { error } = await supabase.functions.invoke("call-vote", {
       body: {
@@ -504,6 +513,7 @@ export const useSupabaseGame = () => {
     if (!currentRoomId.value || !currentPlayerId.value) return
 
     sentry.logGameAction("cast_vote", { roomId: currentRoomId.value, voterId: currentPlayerId.value, targetId })
+    sentry.metricVoteCast(currentRoomId.value)
 
     const { error } = await supabase.functions.invoke("cast-vote", {
       body: {
@@ -564,6 +574,7 @@ export const useSupabaseGame = () => {
     }
 
     sentry.logConnection("reconnect", { roomId: currentRoomId.value, attempt: reconnectAttempts.value + 1 })
+    sentry.metricConnectionReconnected(reconnectAttempts.value + 1)
 
     reconnecting.value = true
     reconnectAttempts.value++

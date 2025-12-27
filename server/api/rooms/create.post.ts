@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid"
 import { serverSupabaseClient } from "#supabase/server"
+import * as Sentry from "@sentry/nuxt"
 import type { GameSettings } from "../../../app/types/game"
 import {
   MIN_PLAYERS,
@@ -107,6 +108,10 @@ export default defineEventHandler(async (event) => {
   }
 
   console.log("[room.create] Room created successfully", { roomId })
+
+  Sentry.metrics.count("room.created", 1, {
+    attributes: { is_public: String(publicRoom) },
+  })
 
   return {
     success: true,

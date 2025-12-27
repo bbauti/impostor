@@ -45,6 +45,8 @@ const gameOverData = ref<GameOverData | null>(null);
 const roomSettings = ref<GameSettings | null>(null);
 const roomCreatorId = ref<string | null>(null);
 const roomNotFound = ref(false);
+const gameStartTime = ref<number | null>(null);
+const lastPhaseTime = ref<number>(Date.now());
 
 // Timers managed by useTimer composable
 
@@ -118,6 +120,7 @@ onMounted(async () => {
       roomUpdate.room.phase = gameState.phase.value;
     }
     gameState.updateRoom(roomUpdate.room);
+    sentry.metricRoomPlayerCount(roomId, roomUpdate.room.players.length);
 
     session.updateActivity();
   });
@@ -129,10 +132,17 @@ onMounted(async () => {
   });
 
   game.on('PHASE_CHANGE', (payload: any) => {
+    const now = Date.now();
+    const phaseDuration = now - lastPhaseTime.value;
+    
     sentry.logPhase(payload.phase, { roomId });
+    sentry.metricPhaseChanged(payload.phase, phaseDuration);
+    
+    lastPhaseTime.value = now;
     gameState.updatePhase(payload.phase);
 
     if (payload.phase === 'role_reveal') {
+      gameStartTime.value = now;
       game.updatePresenceStatus('playing');
       soundEffects.play('roleReveal');
     }
@@ -167,11 +177,14 @@ onMounted(async () => {
 
   game.on('GAME_OVER', (payload: unknown) => {
     const data = payload as Omit<GameOverData, 'players'>;
+    const gameDuration = gameStartTime.value ? Date.now() - gameStartTime.value : 0;
+    
     sentry.logGameAction("game_over", { 
       roomId, 
       winner: data.winner, 
       playerCount: gameState.players.value.length 
     });
+    sentry.metricGameEnded(data.winner, gameDuration);
     
     gameOverData.value = {
       ...data,
@@ -185,6 +198,7 @@ onMounted(async () => {
     soundEffects.play(playerWon ? 'victory' : 'defeat');
 
     roomChat.clearMessages();
+    gameStartTime.value = null;
   });
 
   // Listen for chat messages
@@ -291,6 +305,7 @@ const showChat = computed(() => {
 const handleSendMessage = async (content: string) => {
   if (!gameState.currentPlayerId.value) return;
 
+  sentry.metricChatMessageSent(roomId);
   await roomChat.sendMessage(
     roomId,
     gameState.currentPlayerId.value,
