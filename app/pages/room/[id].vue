@@ -35,6 +35,7 @@ const session = useSession();
 const soundEffects = useSoundEffects();
 const roomChat = useRoomChat();
 const timer = useTimer();
+const sentry = useSentryLogger();
 
 const playerName = ref('');
 const joined = ref(false);
@@ -84,6 +85,7 @@ onMounted(async () => {
       }
     }
     catch {
+      sentry.logRoom("not_found", roomId);
       roomNotFound.value = true;
       return;
     }
@@ -122,10 +124,12 @@ onMounted(async () => {
 
   game.on('ROLE_ASSIGNED', (payload: unknown) => {
     const roleData = payload as RoleAssignedPayload;
+    sentry.logPlayer("role_assigned", gameState.currentPlayerId.value || "", { role: roleData.role, roomId });
     gameState.setRole(roleData.role === 'impostor', roleData.word, roleData.category);
   });
 
   game.on('PHASE_CHANGE', (payload: any) => {
+    sentry.logPhase(payload.phase, { roomId });
     gameState.updatePhase(payload.phase);
 
     if (payload.phase === 'role_reveal') {
@@ -163,6 +167,12 @@ onMounted(async () => {
 
   game.on('GAME_OVER', (payload: unknown) => {
     const data = payload as Omit<GameOverData, 'players'>;
+    sentry.logGameAction("game_over", { 
+      roomId, 
+      winner: data.winner, 
+      playerCount: gameState.players.value.length 
+    });
+    
     gameOverData.value = {
       ...data,
       players: gameState.players.value
@@ -174,7 +184,6 @@ onMounted(async () => {
       || (data.winner === 'impostors' && isImpostor);
     soundEffects.play(playerWon ? 'victory' : 'defeat');
 
-    // Clear chat messages locally when game ends
     roomChat.clearMessages();
   });
 
@@ -185,17 +194,18 @@ onMounted(async () => {
   });
 
   game.on('ERROR', (payload: any) => {
+    sentry.logError("game_error", undefined, { message: payload.message, roomId });
     error.value = payload.message || 'Ocurrió un error';
     showNamePrompt.value = true;
     joined.value = false;
   });
 
   game.on('ROOM_DELETED', (_payload: any) => {
+    sentry.logRoom("delete", roomId);
     error.value = 'La sala ha sido cerrada porque todos los jugadores se fueron';
     showNamePrompt.value = true;
     joined.value = false;
 
-    // Redirigir después de 3 segundos
     setTimeout(() => {
       navigateTo('/');
     }, 3000);

@@ -60,12 +60,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Generate room ID (6 characters, uppercase) and creator ID
   const roomId = nanoid(6).toUpperCase()
   const creatorId = `creator_${Date.now()}_${nanoid(9)}`
-
-  // Ensure isPublic is a boolean (defaults to false)
   const publicRoom = isPublic === true
+
+  console.log("[room.create] Creating room", { roomId, isPublic: publicRoom, maxPlayers, impostorCount })
 
   const settings = {
     maxPlayers,
@@ -84,6 +83,7 @@ export default defineEventHandler(async (event) => {
   })
 
   if (error) {
+    console.error("[room.create] Failed to create room", { roomId, error: error.message })
     throw createError({
       statusCode: 500,
       message: "Failed to create room",
@@ -103,9 +103,10 @@ export default defineEventHandler(async (event) => {
   })
 
   if (gameStateError) {
-    // Log error but don't fail room creation
-    // Game state will be created when first player joins
+    console.warn("[room.create] Failed to create initial game state", { roomId, error: gameStateError.message })
   }
+
+  console.log("[room.create] Room created successfully", { roomId })
 
   return {
     success: true,

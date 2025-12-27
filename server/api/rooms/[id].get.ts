@@ -4,6 +4,7 @@ export default defineEventHandler(async (event) => {
   const roomId = getRouterParam(event, "id")
 
   if (!roomId) {
+    console.error("[room.get] Missing room ID")
     throw createError({
       statusCode: 400,
       message: "Room ID is required",
@@ -11,13 +12,13 @@ export default defineEventHandler(async (event) => {
   }
 
   if (roomId.length < 4 || roomId.length > 10) {
+    console.error("[room.get] Invalid room ID format", { roomId })
     throw createError({
       statusCode: 400,
       message: "Invalid room ID format",
     })
   }
 
-  // Fetch room from database
   const supabase = await serverSupabaseClient(event)
   const { data: room, error } = await supabase
     .from("rooms")
@@ -26,11 +27,14 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (error || !room) {
+    console.warn("[room.get] Room not found", { roomId })
     throw createError({
       statusCode: 404,
       message: "Room not found",
     })
   }
+
+  console.log("[room.get] Room fetched successfully", { roomId })
 
   return {
     success: true,

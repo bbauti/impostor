@@ -3,5 +3,23 @@
   "compatibility_date": "2024-11-01",
   "version_metadata": {
     "binding": "CF_VERSION_METADATA"
+  },
+  // Cloudflare Platform Drains for Sentry
+  // To complete setup:
+  // 1. Go to Cloudflare Dashboard > Workers & Pages > Observability
+  // 2. Click "Add destination" and create two destinations:
+  //    - Logs: Name "sentry-logs", Type "Logs", Endpoint: your Sentry OTLP logs URL
+  //    - Traces: Name "sentry-traces", Type "Traces", Endpoint: your Sentry OTLP traces URL
+  // 3. Add header: x-sentry-auth = "sentry sentry_key=YOUR_SENTRY_PUBLIC_KEY"
+  // Find your OTLP endpoints in Sentry: Project Settings > Client Keys > OpenTelemetry (OTLP)
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "destinations": ["sentry-logs"]
+    },
+    "traces": {
+      "enabled": true,
+      "destinations": ["sentry-traces"]
+    }
   }
 }

@@ -6,6 +6,7 @@ import type {
   GameSettings,
   GamePhase,
 } from "~/types/game"
+import { useSentryLogger } from "./useSentryLogger"
 
 interface PresencePayload {
   playerId: string
@@ -29,6 +30,7 @@ interface ReconnectionState {
 
 export const useSupabaseGame = () => {
   const supabase = useSupabaseClient()
+  const sentry = useSentryLogger()
 
   const channel = ref<RealtimeChannel | null>(null)
   const connected = ref(false)
@@ -118,6 +120,9 @@ export const useSupabaseGame = () => {
     if (channel.value) {
       await leaveRoom()
     }
+
+    sentry.logRoom("join", roomId, { playerName, isCreator: !!creatorId })
+    sentry.setRoomContext(roomId)
 
     connecting.value = true
     currentRoomId.value = roomId
@@ -283,6 +288,9 @@ export const useSupabaseGame = () => {
         connected.value = true
         connecting.value = false
 
+        sentry.logConnection("connect", { roomId, playerId: currentPlayerId.value })
+        sentry.setUser(currentPlayerId.value!, playerName)
+
         reconnectionState.value = {
           playerName,
           isReady: false,
@@ -302,6 +310,7 @@ export const useSupabaseGame = () => {
 
         emit("CONNECT", { playerId: currentPlayerId.value, roomId })
       } else if (status === "CHANNEL_ERROR") {
+        sentry.logConnection("error", { roomId, status: "CHANNEL_ERROR" })
         connecting.value = false
         connected.value = false
         if (reconnectionState.value) {
@@ -310,6 +319,7 @@ export const useSupabaseGame = () => {
           emit("ERROR", { message: "Error connecting to room" })
         }
       } else if (status === "TIMED_OUT") {
+        sentry.logConnection("timeout", { roomId })
         connecting.value = false
         connected.value = false
         if (reconnectionState.value) {
@@ -318,6 +328,7 @@ export const useSupabaseGame = () => {
           emit("ERROR", { message: "Connection timed out" })
         }
       } else if (status === "CLOSED") {
+        sentry.logConnection("disconnect", { roomId, reason: "CLOSED" })
         connecting.value = false
         connected.value = false
         if (reconnectionState.value && currentRoomId.value) {
@@ -332,6 +343,12 @@ export const useSupabaseGame = () => {
   }
 
   const leaveRoom = async () => {
+    if (currentRoomId.value) {
+      sentry.logRoom("leave", currentRoomId.value)
+    }
+    sentry.clearRoomContext()
+    sentry.clearUser()
+
     cleanupVisibilityHandler()
     reconnectionState.value = null
     reconnectAttempts.value = 0
@@ -387,6 +404,8 @@ export const useSupabaseGame = () => {
   const markReady = async () => {
     if (!channel.value || !currentPlayerId.value) return
 
+    sentry.logPlayer("ready", currentPlayerId.value)
+
     const presenceState = channel.value.presenceState<PresencePayload>()
     const currentPresence = presenceState[currentPlayerId.value]?.[0]
 
@@ -422,6 +441,8 @@ export const useSupabaseGame = () => {
 
   const startGame = async () => {
     if (!currentRoomId.value || !currentPlayerId.value || !channel.value) return
+
+    sentry.logGameAction("start_game", { roomId: currentRoomId.value, playerId: currentPlayerId.value })
 
     const presenceState = channel.value.presenceState<PresencePayload>()
 
@@ -464,6 +485,8 @@ export const useSupabaseGame = () => {
   const callVote = async () => {
     if (!currentRoomId.value || !currentPlayerId.value) return
 
+    sentry.logGameAction("call_vote", { roomId: currentRoomId.value, playerId: currentPlayerId.value })
+
     const { error } = await supabase.functions.invoke("call-vote", {
       body: {
         roomId: currentRoomId.value,
@@ -472,12 +495,15 @@ export const useSupabaseGame = () => {
     })
 
     if (error) {
+      sentry.logError("call_vote_failed", error, { roomId: currentRoomId.value })
       emit("ERROR", { message: error.message })
     }
   }
 
   const castVote = async (targetId: string | null) => {
     if (!currentRoomId.value || !currentPlayerId.value) return
+
+    sentry.logGameAction("cast_vote", { roomId: currentRoomId.value, voterId: currentPlayerId.value, targetId })
 
     const { error } = await supabase.functions.invoke("cast-vote", {
       body: {
@@ -488,6 +514,7 @@ export const useSupabaseGame = () => {
     })
 
     if (error) {
+      sentry.logError("cast_vote_failed", error, { roomId: currentRoomId.value })
       emit("ERROR", { message: error.message })
     }
   }
@@ -536,6 +563,8 @@ export const useSupabaseGame = () => {
       return
     }
 
+    sentry.logConnection("reconnect", { roomId: currentRoomId.value, attempt: reconnectAttempts.value + 1 })
+
     reconnecting.value = true
     reconnectAttempts.value++
 
@@ -582,10 +611,11 @@ export const useSupabaseGame = () => {
       )
 
       reconnectAttempts.value = 0
-    } catch {
+    } catch (e) {
       if (reconnectAttempts.value < maxReconnectAttempts) {
         setTimeout(handleReconnection, 1000)
       } else {
+        sentry.logError("reconnection_failed", e, { roomId: currentRoomId.value, attempts: reconnectAttempts.value })
         emit("ERROR", {
           message: "No se pudo reconectar. Por favor recarga la página.",
         })
