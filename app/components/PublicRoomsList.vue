@@ -215,7 +215,7 @@ watch(currentPage, () => {
                 {{ room.playerCount }} / {{ room.maxPlayers }} jugadores
               </UBadge>
               <ProseP class="text-sm text-dimmed truncate my-0">
-                {{ getCategoryNames(room.categories) }}
+                {{ getCategoryNames(room.categories.length > 2 ? room.categories.slice(0, 3) : room.categories) + (room.categories.length > 2 ? '...' : '') }}
               </ProseP>
             </div>
 
