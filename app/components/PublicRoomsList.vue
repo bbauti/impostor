@@ -88,12 +88,18 @@ const subscribeToUpdates = () => {
 // Unsubscribe from real-time updates
 const unsubscribeFromUpdates = () => {
   if (roomsChannel) {
-    supabase.removeChannel(roomsChannel);
+    const channel = roomsChannel;
     roomsChannel = null;
+    try {
+      supabase.removeChannel(channel);
+    } catch {}
   }
   if (gameStatesChannel) {
-    supabase.removeChannel(gameStatesChannel);
+    const channel = gameStatesChannel;
     gameStatesChannel = null;
+    try {
+      supabase.removeChannel(channel);
+    } catch {}
   }
 };
 

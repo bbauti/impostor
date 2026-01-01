@@ -376,8 +376,11 @@ export const useSupabaseGame = () => {
     eventHandlers.clear()
 
     if (channel.value && currentRoomId.value) {
+      const channelToLeave = channel.value
+      channel.value = null // Nullify immediately to prevent concurrent access
+
       // Check if we're the last player in the room
-      const presenceState = channel.value.presenceState<PresencePayload>()
+      const presenceState = channelToLeave.presenceState<PresencePayload>()
       const players = buildPlayersFromPresence(presenceState)
       const roomIdBeforeLeave = currentRoomId.value
 
@@ -394,9 +397,12 @@ export const useSupabaseGame = () => {
         } catch {}
       }
 
-      await channel.value.untrack()
-      await supabase.removeChannel(channel.value)
-      channel.value = null
+      try {
+        await channelToLeave.untrack()
+      } catch {}
+      try {
+        await supabase.removeChannel(channelToLeave)
+      } catch {}
     }
     connected.value = false
     connecting.value = false
@@ -609,8 +615,11 @@ export const useSupabaseGame = () => {
       }
 
       if (channel.value) {
-        await supabase.removeChannel(channel.value)
+        const channelToRemove = channel.value
         channel.value = null
+        try {
+          await supabase.removeChannel(channelToRemove)
+        } catch {}
       }
 
       await joinRoom(
